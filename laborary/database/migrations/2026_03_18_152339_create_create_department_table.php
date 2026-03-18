@@ -11,9 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('create_department', function (Blueprint $table) {
+        Schema::create('registration_configs', function (Blueprint $table) {
             $table->id();
+            $table->string('title', 100)->comment('名称');
+            $table->timestamp('reg_start_time')->comment('报名开始时间');
+            $table->timestamp('reg_end_time')->comment('报名截止时间');
+            $table->unsignedBigInteger('department_id')->comment('关联部门ID');
+            $table->tinyInteger('is_open')->default(1)->comment('报名是否开启(0:关闭,1:开启)');
             $table->timestamps();
+            
+            $table->foreign('department_id')->references('id')->on('departments')->onDelete('cascade');
         });
     }
 
@@ -22,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('create_department');
+        Schema::dropIfExists('registration_configs');
     }
 };
