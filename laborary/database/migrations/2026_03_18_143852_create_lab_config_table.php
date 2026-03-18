@@ -1,26 +1,25 @@
 <?php
-
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+return new class extends Migration {
+    public function up()
     {
         Schema::create('lab_config', function (Blueprint $table) {
             $table->id();
+            $table->string('name')->comment('实验室名称');
+            $table->text('intro')->comment('实验室简介');
+            $table->string('address')->comment('实验室地址');
+            $table->string('contact')->nullable()->comment('联系方式');
+            $table->unsignedBigInteger('department_id')->comment('部门ID');
             $table->timestamps();
+            $table->unique('id'); // 强制单条数据
+            $table->foreign('department_id')->references('id')->on('departments')->onDelete('cascade');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('lab_config');
     }
