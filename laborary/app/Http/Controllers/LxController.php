@@ -4,6 +4,7 @@ namespace app\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\LabConfig;
+use App\Models\LabNews;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -104,6 +105,96 @@ class LxController extends Controller
             'code' => 200,
             'msg' => 'success',
             'data' => $data
+        ]);
+    }
+
+
+
+     /**
+     * 获取部门详情
+     */
+    public function getDepartmentDetail($id)
+    {
+        $department = Department::with(['labUsers', 'registrationConfigs'])->find($id);
+
+        if (!$department) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '部门不存在',
+                'data' => null
+            ], 404);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'msg' => 'success',
+            'data' => $department
+        ]);
+    }
+
+
+
+    /**
+     * 获取新闻列表（支持分页）
+     */
+    public function getNewsList(Request $request)
+    {
+        $query = LabNews::query();
+
+        // 可按标题搜索
+        if ($request->has('title')) {
+            $query->where('title', 'like', '%' . $request->input('title') . '%');
+        }
+
+        // 可按置顶筛选
+        if ($request->has('is_top')) {
+            $query->where('is_top', $request->input('is_top'));
+        }
+
+        // 排序：置顶优先，然后按创建时间倒序
+        $query->orderBy('is_top', 'desc')->orderBy('created_at', 'desc');
+
+        // 分页处理
+        $page = $request->input('page', 1);
+        $size = $request->input('size', 10);
+        $list = $query->paginate($size, ['*'], 'page', $page);
+
+        $data = [
+            'list' => $list->items(),
+            'total' => $list->total(),
+            'page' => (int)$page,
+            'size' => (int)$size
+        ];
+
+        return response()->json([
+            'code' => 200,
+            'msg' => 'success',
+            'data' => $data
+        ]);
+    }
+
+    /**
+     * 获取新闻详情
+     */
+    public function getNewsDetail($id)
+    {
+        $news = LabNews::with('author')->find($id);
+
+        if (!$news) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '新闻不存在',
+                'data' => null
+            ], 404);
+        }
+
+        // 增加浏览量
+        $news->increment('view_count');
+
+        return response()->json([
+            'code' => 200,
+            'msg' => 'success',
+            'data' => $news
         ]);
     }
 }

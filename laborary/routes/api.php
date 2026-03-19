@@ -20,6 +20,16 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('departments')->group(function () {
         // 获取部门列表
         Route::get('/', [LxController::class, 'getDepartments']);
+        // 获取部门详情
+        Route::get('/{id}', [LxController::class, 'getDepartmentDetail']);
+    });
+    
+    // 新闻相关
+    Route::prefix('news')->group(function () {
+        // 获取新闻列表
+        Route::get('/', [LxController::class, 'getNewsList']);
+        // 获取新闻详情
+        Route::get('/{id}', [LxController::class, 'getNewsDetail']);
     });
     
 });
