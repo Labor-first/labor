@@ -4,7 +4,6 @@ namespace app\Http\Controllers;
 
 use App\Models\ActivityRegistration;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Validator;
 
 class FmyController extends Controller
@@ -45,7 +44,7 @@ class FmyController extends Controller
 
 
     //修改密码（需要登录,即需要token）
-    public function ChangePassword(Request $request)
+    public function ChangePassword()
     {
         try {
             //从当前的 HTTP 请求头中提取 JWT Token
@@ -57,7 +56,7 @@ class FmyController extends Controller
             }
             //验证器
             //request()->all指提取当前请求中所有的输入数据
-            $validated =$request Validator([
+            $validator = Validator::make(request()->all(), [
                 'old_password' => 'required|string|min:6',
                 'new_password' => 'required|string|min:6|confirmed',
             ]);
@@ -122,15 +121,15 @@ class FmyController extends Controller
 
 
     //提交报名（需要登录,即需要token）
-    public function RegistrationStore(Request $request){
+    public function RegistrationStore(){
         $user=JWTAuth::parseToken()->authenticate();
         if (!$user) {
             return response()->json([
                 'message' => '用户没找到'
             ], 401);
         }
-        $validated =$request->validate([
-            'config_id'=>'required|integer|exists:registration_configs,id',
+        $validator = Validator::make(request()->all(), [
+            'config_id'=>'required|integer|exists:registration_config,id',
             'class'=>'required|integer',
             'academy'=>'required|string',
             'major'=>'required|string',
@@ -145,11 +144,11 @@ class FmyController extends Controller
             'sign_reason.required'=>'申请理由不能为空',
             'sign_reason.min'=>'申请理由不能小于10个字'
         ]);
-        if ($validated->fails()) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message'=>'参数验证失败',
-                'errors' => $validated->errors(),
+                'errors' => $validator->errors(),
             ]);
         }
         $Registration=ActivityRegistration::create([
