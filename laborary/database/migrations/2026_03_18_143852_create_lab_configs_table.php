@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up()
     {
-        Schema::create('lab_config', function (Blueprint $table) {
+        Schema::create('lab_configs', function (Blueprint $table) {
             $table->id();
             $table->string('name')->comment('实验室名称');
             $table->text('intro')->comment('实验室简介');
