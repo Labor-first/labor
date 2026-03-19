@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up()
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('lab_users', function (Blueprint $table) {
             $table->id();
            $table->string('account')->unique()->comment('登录账号');
             $table->string('username')->comment('姓名');
@@ -25,6 +25,6 @@ return new class extends Migration {
 
     public function down()
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('lab_users');
     }
 };

@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamps();
             
             $table->foreign('config_id')->references('id')->on('registration_configs')->onDelete('cascade');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('lab_users')->onDelete('cascade');
             $table->unique(['config_id', 'user_id'], 'unique_user_config');
         });
     }
