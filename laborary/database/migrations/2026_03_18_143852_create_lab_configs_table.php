@@ -15,7 +15,6 @@ return new class extends Migration {
             $table->unsignedBigInteger('department_id')->comment('部门ID');
             $table->timestamps();
             $table->unique('id'); // 强制单条数据
-            $table->foreign('department_id')->references('id')->on('departments')->onDelete('cascade');
         });
     }
 

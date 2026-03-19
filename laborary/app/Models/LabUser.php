@@ -42,7 +42,7 @@ class LabUser extends Authenticatable
 
     public function news(): HasMany
     {
-        return $this->hasMany(\App\Models\LabNews::class, 'author_id');
+        return $this->hasMany(\app\Models\LabNews::class, 'author_id');
     }
 // 用户的报名记录【一对一！只能有一个！】
     public function activityRegistration()
