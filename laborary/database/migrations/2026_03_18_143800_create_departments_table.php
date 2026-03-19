@@ -12,6 +12,8 @@ return new class extends Migration {
             $table->text('intro')->nullable()->comment('部门介绍');
             $table->string('tech_stack')->nullable()->comment('技术栈');
             $table->integer('sort')->default(0);
+            //关联实验室（固定为1，因为只有一个实验室）
+            $table->integer('lab_id')->default(1)->comment('所属实验室ID');
             $table->timestamps();
         });
     }

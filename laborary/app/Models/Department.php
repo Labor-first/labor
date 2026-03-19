@@ -15,6 +15,7 @@ class Department extends Model
         'intro',//部门介绍
         'tech_stack',//技术栈
         'sort',//排序
+        'lab_id',//所属实验室ID
     ];
 
     protected $casts = [
@@ -26,13 +27,15 @@ class Department extends Model
         return $this->hasMany(LabUser::class);
     }
 
-    public function labConfigs(): HasMany
-    {
-        return $this->hasMany(LabConfig::class);
-    }
+
 
     public function registrationConfigs(): HasMany
     {
         return $this->hasMany(RegistrationConfig::class);
+    }
+
+    public function lab(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(LabConfig::class, 'lab_id');
     }
 }

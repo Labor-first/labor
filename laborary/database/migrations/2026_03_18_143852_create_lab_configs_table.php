@@ -12,10 +12,8 @@ return new class extends Migration {
             $table->text('intro')->comment('实验室简介');
             $table->string('address')->comment('实验室地址');
             $table->string('contact')->nullable()->comment('联系方式');
-            $table->unsignedBigInteger('department_id')->comment('部门ID');
             $table->timestamps();
             $table->unique('id'); // 强制单条数据
-            $table->foreign('department_id')->references('id')->on('departments')->onDelete('cascade');
         });
     }
 
