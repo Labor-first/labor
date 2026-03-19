@@ -17,7 +17,7 @@ return new class extends Migration
             $table->timestamp('reg_start_time')->comment('报名开始时间');
             $table->timestamp('reg_end_time')->comment('报名截止时间');
             $table->unsignedBigInteger('department_id')->comment('关联部门ID');
-            $table->tinyInteger('is_open')->default(1)->comment('报名是否开启(0:关闭,1:开启)');
+            $table->tinyInteger('is_open')->default(0)->comment('报名是否开启(0:关闭,1:开启)');
             $table->timestamps();
             
             $table->foreign('department_id')->references('id')->on('departments')->onDelete('cascade');
