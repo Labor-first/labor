@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LabConfig extends Model
 {
@@ -17,11 +17,10 @@ class LabConfig extends Model
         'intro',//实验室介绍
         'address',//实验室地址
         'contact',//实验室联系人
-        'department_id',//关联部门ID
     ];
 
-    public function department(): BelongsTo
+    public function departments(): HasMany
     {
-        return $this->belongsTo(Department::class);
+        return $this->hasMany(Department::class, 'lab_id');
     }
 }
