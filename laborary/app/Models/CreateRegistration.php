@@ -12,11 +12,11 @@ class RegistrationConfig extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title',
-        'reg_start_time',
-        'reg_end_time',
-        'department_id',
-        'is_open',
+        'title',//报名表标题
+        'reg_start_time',//报名开始时间
+        'reg_end_time',//报名截止时间
+        'department_id',//关联部门ID
+        'is_open',//是否开启报名
     ];
 
     protected $casts = [

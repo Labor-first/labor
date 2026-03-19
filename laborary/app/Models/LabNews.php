@@ -13,12 +13,12 @@ class LabNews extends Model
     protected $table = 'news';
 
     protected $fillable = [
-        'title',
-        'content',
-        'cover',
-        'is_top',
-        'author_id',
-        'published_at',
+        'title',//新闻标题
+        'content',//新闻内容
+        'cover',//新闻封面
+        'is_top',//是否置顶
+        'author_id',//作者ID
+        'published_at',//发布时间时间
     ];
 
     protected $casts = [

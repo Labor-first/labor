@@ -14,15 +14,15 @@ class LabUser extends Authenticatable
     protected $table = 'lab_users';
 
     protected $fillable = [
-        'account',
-        'username',
-        'phone',
-        'email',
-        'password_hash',
-        'is_active',
-        'role',
-        'department_id',
-        'last_login_at',
+        'account',//账号
+        'username',//用户名
+        'phone',//手机号
+        'email',//邮箱
+        'password_hash',//密码哈希值
+        'is_active',//是否激活
+        'role',//角色
+        'department_id',//关联部门ID
+        'last_login_at',//最后登录时间
     ];
 
     protected $hidden = [
@@ -30,9 +30,9 @@ class LabUser extends Authenticatable
     ];
 
     protected $casts = [
-        'is_active' => 'integer',
-        'role' => 'integer',
-        'last_login_at' => 'datetime',
+        'is_active' => 'integer',// 转数字
+        'role' => 'integer',// 转数字
+        'last_login_at' => 'datetime',// 转时间
     ];
 
     public function department(): BelongsTo
@@ -44,9 +44,9 @@ class LabUser extends Authenticatable
     {
         return $this->hasMany(\App\Models\LabNews::class, 'author_id');
     }
-
-    public function activityRegistrations(): HasMany
-    {
-        return $this->hasMany(ActivityRegistration::class);
-    }
+// 用户的报名记录【一对一！只能有一个！】
+    public function activityRegistration()
+{
+    return $this->hasOne(ActivityRegistration::class);
+}
 }

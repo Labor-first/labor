@@ -13,16 +13,16 @@ class ActivityRegistration extends Model
     protected $table = 'activity_registration';
 
     protected $fillable = [
-        'config_id',
-        'user_id',
-        'status',
-        'audit_time',
-        'audit_remark',
-        'class',
-        'academy',
-        'major',
-        'director_name',
-        'sign_reason',
+        'config_id',//报名表配置ID
+        'user_id',//('报名人ID,x学号');
+        'status',//报名状态
+        'audit_time',//审核时间
+        'audit_remark',//审核备注/拒绝原因
+        'class',//班级
+        'academy',//学院
+        'major',//专业
+        'director_name',//导员姓名
+        'sign_reason',//报名理由
     ];
 
     protected $casts = [
@@ -31,11 +31,10 @@ class ActivityRegistration extends Model
         'class' => 'integer',
     ];
 
-    const STATUS_PENDING = 1;
-    const STATUS_APPROVED = 2;
-    const STATUS_CANCELLED = 3;
-    const STATUS_REJECTED = 4;
-
+    const STATUS_PENDING = 1;   // 待审核
+    const STATUS_APPROVED = 2;  // 已通过
+    const STATUS_CANCELLED = 3; // 已取消
+    const STATUS_REJECTED = 4;  // 已拒绝
     public function config(): BelongsTo
     {
         return $this->belongsTo(RegistrationConfig::class, 'config_id');

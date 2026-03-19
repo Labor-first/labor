@@ -11,10 +11,10 @@ class Department extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
-        'intro',
-        'tech_stack',
-        'sort',
+        'name',//部门名称
+        'intro',//部门介绍
+        'tech_stack',//技术栈
+        'sort',//排序
     ];
 
     protected $casts = [

@@ -13,11 +13,11 @@ class LabConfig extends Model
     protected $table = 'lab_config';
 
     protected $fillable = [
-        'name',
-        'intro',
-        'address',
-        'contact',
-        'department_id',
+        'name',//实验室名称
+        'intro',//实验室介绍
+        'address',//实验室地址
+        'contact',//实验室联系人
+        'department_id',//关联部门ID
     ];
 
     public function department(): BelongsTo
