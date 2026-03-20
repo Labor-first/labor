@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('activity_registration', function (Blueprint $table) {
+        Schema::create('application_forms', function (Blueprint $table) {
             $table->id()->comment('报名记录ID，主键');
             $table->unsignedBigInteger('config_id')->comment('报名表配置ID');
             $table->unsignedBigInteger('user_id')->comment('报名人ID');
@@ -38,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('activity_registration');
+        Schema::dropIfExists('application_forms');
     }
 };

@@ -30,8 +30,8 @@ class RegistrationConfig extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function activityRegistrations(): HasMany
+    public function applicationForms(): HasMany
     {
-        return $this->hasMany(ActivityRegistration::class, 'config_id');
+        return $this->hasMany(ApplicationForm::class, 'config_id');
     }
 }

@@ -44,9 +44,9 @@ class LabUser extends Authenticatable
     {
         return $this->hasMany(\app\Models\LabNews::class, 'author_id');
     }
-// 用户的报名记录【一对一！只能有一个！】
-    public function activityRegistration()
-{
-    return $this->hasOne(ActivityRegistration::class);
-}
+    // 用户的报名记录【一对一！只能有一个！】
+    public function applicationForm(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ApplicationForm::class, 'user_id');
+    }
 }
