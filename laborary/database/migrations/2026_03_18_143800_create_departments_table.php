@@ -8,7 +8,7 @@ return new class extends Migration {
     {
         Schema::create('departments', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->comment('部门名称');
+            $table->string('name')->unique()->comment('部门名称');
             $table->text('intro')->nullable()->comment('部门介绍');
             $table->string('tech_stack')->nullable()->comment('技术栈');
             $table->integer('sort')->default(0);
