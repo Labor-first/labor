@@ -73,6 +73,30 @@ class LxController extends Controller
     }
 
     /**
+     * 删除实验室配置
+     */
+    public function deleteLabConfig()
+    {
+        $config = LabConfig::first();
+
+        if (!$config) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '实验室配置不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $config->delete();
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '删除成功',
+            'data' => null
+        ]);
+    }
+
+    /**
      * 获取部门列表
      */
     public function getDepartments(Request $request)
@@ -132,6 +156,115 @@ class LxController extends Controller
         ]);
     }
 
+    /**
+     * 创建部门
+     */
+    public function createDepartment(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255|unique:departments,name',
+            'intro' => 'nullable|string',
+            'tech_stack' => 'nullable|string|max:255',
+            'sort' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $department = Department::create($validator->validated());
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '创建成功',
+            'data' => $department
+        ]);
+    }
+
+    /**
+     * 更新部门
+     */
+    public function updateDepartment(Request $request, $id)
+    {
+        $department = Department::find($id);
+
+        if (!$department) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '部门不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'nullable|string|max:255|unique:departments,name,' . $id,
+            'intro' => 'nullable|string',
+            'tech_stack' => 'nullable|string|max:255',
+            'sort' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $department->update($validator->validated());
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '更新成功',
+            'data' => $department
+        ]);
+    }
+
+    /**
+     * 删除部门
+     */
+    public function deleteDepartment($id)
+    {
+        $department = Department::find($id);
+
+        if (!$department) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '部门不存在',
+                'data' => null
+            ], 404);
+        }
+
+        // 检查部门下是否有关联的用户或报名表配置
+        if ($department->labUsers()->count() > 0) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '该部门下存在用户，无法删除',
+                'data' => null
+            ], 400);
+        }
+
+        if ($department->registrationConfigs()->count() > 0) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '该部门下存在报名表配置，无法删除',
+                'data' => null
+            ], 400);
+        }
+
+        $department->delete();
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '删除成功',
+            'data' => null
+        ]);
+    }
+
 
 
     /**
@@ -188,13 +321,106 @@ class LxController extends Controller
             ], 404);
         }
 
-        // 增加浏览量
-        $news->increment('view_count');
-
         return response()->json([
             'code' => 200,
             'msg' => 'success',
             'data' => $news
+        ]);
+    }
+
+    /**
+     * 创建新闻
+     */
+    public function createNews(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+            'cover' => 'nullable|string|max:255',
+            'is_top' => 'nullable|integer|in:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $validated = $validator->validated();
+        
+        $validated['published_at'] = now();
+
+        $news = LabNews::create($validated);
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '创建成功',
+            'data' => $news
+        ]);
+    }
+
+    /**
+     * 更新新闻
+     */
+    public function updateNews(Request $request, $id)
+    {
+        $news = LabNews::find($id);
+
+        if (!$news) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '新闻不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title' => 'nullable|string|max:255',
+            'content' => 'nullable|string',
+            'cover' => 'nullable|string|max:255',
+            'is_top' => 'nullable|integer|in:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $news->update($validator->validated());
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '更新成功',
+            'data' => $news
+        ]);
+    }
+
+    /**
+     * 删除新闻
+     */
+    public function deleteNews($id)
+    {
+        $news = LabNews::find($id);
+
+        if (!$news) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '新闻不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $news->delete();
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '删除成功',
+            'data' => null
         ]);
     }
 }
