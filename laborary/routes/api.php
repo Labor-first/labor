@@ -34,7 +34,7 @@ Route::middleware('auth:api')->group(function () {
     });
     
     // 新闻相关
-    Route::prefix('news')->group(function () {
+    Route::prefix('lab-news')->group(function () {
         // 获取新闻列表
         Route::get('/', [LxController::class, 'getNewsList']);
         // 获取新闻详情
@@ -53,3 +53,9 @@ Route::middleware('auth:api')->group(function () {
 Route::get('/test', function () {
     return response()->json(['msg' => 'API 正常工作']);
 });
+
+// 公开接口（不需要登录）
+Route::get('/departments', [LxController::class, 'getDepartments']);
+Route::get('/departments/{id}', [LxController::class, 'getDepartmentDetail']);
+Route::get('/lab-news', [LxController::class, 'getNewsList']);
+Route::get('/lab-news/{id}', [LxController::class, 'getNewsDetail']);

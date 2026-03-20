@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Validator;
 class LxController extends Controller
 {
     /**
-     * 获取实验室配置（单条）
+     * 获取实验室配置
      */
     public function getLabConfig()
     {
@@ -135,7 +135,7 @@ class LxController extends Controller
      */
     public function getDepartmentDetail($id)
     {
-        $department = Department::with(['labUsers', 'registrationConfigs'])->find($id);
+        $department = Department::find($id);
 
         if (!$department) {
             return response()->json([
@@ -161,7 +161,6 @@ class LxController extends Controller
             'name' => 'required|string|max:255|unique:departments,name',
             'intro' => 'nullable|string',
             'tech_stack' => 'nullable|string|max:255',
-            'sort' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -200,7 +199,6 @@ class LxController extends Controller
             'name' => 'nullable|string|max:255|unique:departments,name,' . $id,
             'intro' => 'nullable|string',
             'tech_stack' => 'nullable|string|max:255',
-            'sort' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -268,7 +266,7 @@ class LxController extends Controller
      */
     public function getNewsList(Request $request)
     {
-        $query = LabNews::query();
+        $query = LabNews::with('author');
 
         // 可按标题搜索
         if ($request->has('title')) {
@@ -280,6 +278,11 @@ class LxController extends Controller
             $query->where('is_top', $request->input('is_top'));
         }
 
+        // 可按作者筛选
+        if ($request->has('author_id')) {
+            $query->where('author_id', $request->input('author_id'));
+        }
+
         // 排序：置顶优先，然后按创建时间倒序
         $query->orderBy('is_top', 'desc')->orderBy('created_at', 'desc');
 
@@ -288,8 +291,24 @@ class LxController extends Controller
         $size = $request->input('size', 10);
         $list = $query->paginate($size, ['*'], 'page', $page);
 
+        // 格式化数据，添加 author_name
+        $formattedList = collect($list->items())->map(function ($news) {
+            return [
+                'id' => $news->id,
+                'title' => $news->title,
+                'content' => $news->content,
+                'cover' => $news->cover,
+                'is_top' => $news->is_top,
+                'author_id' => $news->author_id,
+                'author_name' => $news->author ? $news->author->username : null,
+                'published_at' => $news->published_at,
+                'created_at' => $news->created_at,
+                'updated_at' => $news->updated_at,
+            ];
+        });
+
         $data = [
-            'list' => $list->items(),
+            'list' => $formattedList,
             'total' => $list->total(),
             'page' => (int)$page,
             'size' => (int)$size
@@ -334,6 +353,8 @@ class LxController extends Controller
             'content' => 'required|string',
             'cover' => 'nullable|string|max:255',
             'is_top' => 'nullable|integer|in:0,1',
+            'author_id' => 'required|integer|exists:lab_users,id',
+            'published_at' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {
@@ -346,7 +367,10 @@ class LxController extends Controller
 
         $validated = $validator->validated();
         
-        $validated['published_at'] = now();
+        // 默认当前时间
+        if (!isset($validated['published_at'])) {
+            $validated['published_at'] = now();
+        }
 
         $news = LabNews::create($validated);
 
@@ -377,6 +401,8 @@ class LxController extends Controller
             'content' => 'nullable|string',
             'cover' => 'nullable|string|max:255',
             'is_top' => 'nullable|integer|in:0,1',
+            'author_id' => 'nullable|integer|exists:lab_users,id',
+            'published_at' => 'nullable|date',
         ]);
 
         if ($validator->fails()) {

@@ -10,7 +10,7 @@ class LabNews extends Model
 {
     use HasFactory;
 
-    protected $table = 'news';
+    protected $table = 'lab_news';
 
     protected $fillable = [
         'title',//新闻标题
