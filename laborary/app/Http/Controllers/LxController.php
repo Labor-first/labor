@@ -15,7 +15,7 @@ class LxController extends Controller
      */
     public function getLabConfig()
     {
-        $config = LabConfig::with('departments')->first();
+        $config = LabConfig::first();
 
         if (!$config) {
             return response()->json([
@@ -101,11 +101,7 @@ class LxController extends Controller
      */
     public function getDepartments(Request $request)
     {
-        // 固定：只有一个实验室，比如 id=1
-        $labId = 1;
-
-        // 查询：这个实验室下的所有部门
-        $query = Department::where('lab_id', $labId);
+        $query = Department::query();
 
         // 可按部门名称搜索
         if ($request->has('name')) {
