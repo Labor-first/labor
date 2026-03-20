@@ -11,7 +11,6 @@ return new class extends Migration {
             $table->string('name')->unique()->comment('部门名称');
             $table->text('intro')->nullable()->comment('部门介绍');
             $table->string('tech_stack')->nullable()->comment('技术栈');
-            $table->integer('sort')->default(0);
             $table->timestamps();
         });
     }

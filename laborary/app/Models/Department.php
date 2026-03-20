@@ -14,11 +14,6 @@ class Department extends Model
         'name',//部门名称
         'intro',//部门介绍
         'tech_stack',//技术栈
-        'sort',//排序
-    ];
-
-    protected $casts = [
-        'sort' => 'integer',
     ];
 
     public function labUsers(): HasMany
