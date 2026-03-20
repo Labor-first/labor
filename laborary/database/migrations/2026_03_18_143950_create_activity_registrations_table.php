@@ -23,13 +23,15 @@ return new class extends Migration
             $table->string('major', 20)->comment('专业');
             $table->string('director_name', 20)->comment('导员姓名');
             $table->text('sign_reason')->comment('报名理由');
+            $table->index('user_id');
+            $table->index('status');
             $table->timestamps();
             
             $table->foreign('config_id')->references('id')->on('registration_configs')->onDelete('cascade');
-            $table->foreign('user_id')->references('id')->on('lab_users')->onDelete('cascade');
             $table->unique(['config_id', 'user_id'], 'unique_user_config');
         });
     }
+    
 
     /**
      * Reverse the migrations.
