@@ -10,7 +10,7 @@ class ActivityRegistration extends Model
 {
     use HasFactory;
 
-    protected $table = 'activity_registration';
+    protected $table = 'application_forms';
 
     protected $fillable = [
         'config_id',//报名表配置ID
