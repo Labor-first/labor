@@ -19,6 +19,6 @@ return new class extends Migration {
 
     public function down()
     {
-        Schema::dropIfExists('lab_config');
+        Schema::dropIfExists('lab_configs');
     }
 };

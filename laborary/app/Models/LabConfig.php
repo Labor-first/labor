@@ -9,7 +9,7 @@ class LabConfig extends Model
 {
     use HasFactory;
 
-    protected $table = 'lab_config';
+    protected $table = 'lab_configs';
 
     protected $fillable = [
         'name',//实验室名称
