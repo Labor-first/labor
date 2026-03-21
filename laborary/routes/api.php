@@ -50,18 +50,22 @@ Route::middleware('auth:api')->group(function () {
     
 });
 
-// 无需登录的接口
-//登录
-Route::post('/user/login', [WjcController::class, 'login']);
-//发送激活码
-Route::post('/user/send-activation-code', [WjcController::class, 'sendActivationCode']);
+//无需登录的接口
+Route::prefix('/user')->group(function () {
+    // 登录
+    Route::post('/login', [WjcController::class, 'login']);
+    // 发送激活码
+    Route::post('/send-activation-code', [WjcController::class, 'sendActivationCode']);
+    // 验证激活码（无需登录，补充到无需登录组）
+    Route::post('/verify-activation-code', [WjcController::class, 'verifyActivationCode']);
+});
 
-// 需要登陆的接口
-Route::middleware('auth:api')->group(function () {
-    //登出
-    Route::post('/user/logout', [WjcController::class, 'logout']);
-    //更新个人信息
-    Route::post('/user/update-info', [WjcController::class, 'updateInfo']);
+// 需要登录的接口
+Route::middleware('auth:api')->prefix('/user')->group(function () {
+    // 登出
+    Route::post('/logout', [WjcController::class, 'logout']);
+    // 更新个人信息
+    Route::post('/update-info', [WjcController::class, 'updateInfo']);
 });
 
 // 测试路由（不需要认证）
