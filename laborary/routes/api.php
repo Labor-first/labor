@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LxController;
+use App\Http\Controllers\WjcController;
 
 // JWT 认证路由组
 Route::middleware('auth:api')->group(function () {
@@ -32,6 +33,20 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/{id}', [LxController::class, 'getNewsDetail']);
     });
     
+});
+
+// 无需登录的接口
+//登录
+Route::post('/user/login', [WjcController::class, 'login']);
+//发送激活码
+Route::post('/user/send-activation-code', [WjcController::class, 'sendActivationCode']);
+
+// 需要登陆的接口
+Route::middleware('auth:api')->group(function () {
+    //登出
+    Route::post('/user/logout', [WjcController::class, 'logout']);
+    //更新个人信息
+    Route::post('/user/update-info', [WjcController::class, 'updateInfo']);
 });
 
 // 测试路由（不需要认证）
