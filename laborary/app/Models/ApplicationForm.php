@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ActivityRegistration extends Model
+class ApplicationForm extends Model
 {
     use HasFactory;
 
-    protected $table = 'activity_registration';
+    protected $table = 'application_forms';
 
     protected $fillable = [
         'config_id',//报名表配置ID

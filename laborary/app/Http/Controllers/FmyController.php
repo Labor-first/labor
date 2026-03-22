@@ -2,7 +2,7 @@
 
 namespace app\Http\Controllers;
 
-use App\Models\ActivityRegistration;
+use App\Models\ApplicationForm;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -151,7 +151,7 @@ class FmyController extends Controller
                 'errors' => $validator->errors(),
             ]);
         }
-        $Registration=ActivityRegistration::create([
+        $Registration=ApplicationForm::create([
             'config_id'=>request('config_id'),
             'class'=>request('class'),
             'academy'=>request('academy'),

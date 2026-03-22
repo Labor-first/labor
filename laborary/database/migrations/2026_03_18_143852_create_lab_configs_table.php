@@ -11,7 +11,7 @@ return new class extends Migration {
             $table->string('name')->comment('实验室名称');
             $table->text('intro')->comment('实验室简介');
             $table->string('address')->comment('实验室地址');
-            $table->string('contact')->nullable()->comment('联系方式');
+            $table->string('contact')->comment('联系方式');
             $table->timestamps();
             $table->unique('id'); // 强制单条数据
         });
@@ -19,6 +19,6 @@ return new class extends Migration {
 
     public function down()
     {
-        Schema::dropIfExists('lab_config');
+        Schema::dropIfExists('lab_configs');
     }
 };
