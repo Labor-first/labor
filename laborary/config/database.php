@@ -59,12 +59,8 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-    // PHP 8.5+ 使用新常量，旧版本使用旧常量
-    PHP_VERSION_ID >= 80500 
-        ? \Pdo\Mysql::ATTR_SSL_CA 
-        : PDO::MYSQL_ATTR_SSL_CA 
-    => env('MYSQL_ATTR_SSL_CA'),
-]) : [],
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
         ],
 
         'mariadb' => [
