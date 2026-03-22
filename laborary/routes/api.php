@@ -1,25 +1,26 @@
 <?php
 
+use app\Http\Controllers\FmyController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\LxController;
-use App\Http\Controllers\WjcController;
+use app\Http\Controllers\LxController;
+use app\Http\Controllers\WjcController;
 
 // JWT 认证路由组
 Route::middleware('auth:api')->group(function () {
-    
+
     // 实验室配置相关
     Route::prefix('lab')->group(function () {
         // 获取实验室配置
         Route::get('/config', [LxController::class, 'getLabConfig']);
-        
+
         // 创建或更新实验室配置
         Route::post('/config', [LxController::class, 'saveLabConfig']);
-        
+
         // 删除实验室配置
         Route::delete('/config', [LxController::class, 'deleteLabConfig']);
     });
-    
+
     // 部门相关
     Route::prefix('departments')->group(function () {
         // 获取部门列表
@@ -33,7 +34,7 @@ Route::middleware('auth:api')->group(function () {
         // 删除部门
         Route::delete('/{id}', [LxController::class, 'deleteDepartment']);
     });
-    
+
     // 新闻相关
     Route::prefix('lab-news')->group(function () {
         // 获取新闻列表
@@ -47,7 +48,7 @@ Route::middleware('auth:api')->group(function () {
         // 删除新闻
         Route::delete('/{id}', [LxController::class, 'deleteNews']);
     });
-    
+
 });
 
 //无需登录的接口
@@ -66,6 +67,16 @@ Route::middleware('auth:api')->prefix('/user')->group(function () {
     Route::post('/logout', [WjcController::class, 'logout']);
     // 更新个人信息
     Route::post('/update-info', [WjcController::class, 'updateInfo']);
+    //获取个人信息
+    Route::get('/user/me', [FmyController::class, 'me']);
+    // 修改密码
+    Route::post('/user/change-password', [FmyController::class, 'changePassword']);
+    //提交报名
+    Route::post('/registration', [FmyController::class, 'registrationStore']);
+    //查看报名状态 (GET 请求，带参数 config_id)
+    Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
+    //撤销报名
+    Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);
 });
 
 // 测试路由（不需要认证）
