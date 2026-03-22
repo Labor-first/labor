@@ -6,6 +6,12 @@ use Illuminate\Support\Facades\Route;
 use app\Http\Controllers\LxController;
 use app\Http\Controllers\WjcController;
 
+
+use App\Http\Controllers\Admin\ApplicationController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\SystemController;
+
+
 // JWT 认证路由组
 Route::middleware('auth:api')->group(function () {
 
@@ -89,3 +95,23 @@ Route::get('/departments', [LxController::class, 'getDepartments']);
 Route::get('/departments/{id}', [LxController::class, 'getDepartmentDetail']);
 Route::get('/lab-news', [LxController::class, 'getNewsList']);
 Route::get('/lab-news/{id}', [LxController::class, 'getNewsDetail']);
+
+
+// 管理后台路由组（需要管理员权限）
+Route::middleware(['auth:sanctum', 'admin.role'])->prefix('admin')->group(function () {
+    
+    // 报名管理
+    Route::get('/applications', [ApplicationController::class, 'index']);
+    Route::put('/applications/{id}/audit', [ApplicationController::class, 'audit']);
+    Route::get('/applications/export', [ApplicationController::class, 'export']);
+    
+    // 用户管理
+    Route::get('/users', [UserController::class, 'index']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword']);
+    Route::post('/users/import', [UserController::class, 'import']);
+    
+    // 系统设置
+    Route::put('/system/application-toggle', [SystemController::class, 'toggleApplication']);
+    Route::get('/system/status', [SystemController::class, 'status']);
+});
