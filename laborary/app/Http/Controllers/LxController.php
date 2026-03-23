@@ -1,6 +1,6 @@
 <?php
 
-namespace app\Http\Controllers;
+namespace App\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\LabConfig;
@@ -176,7 +176,13 @@ class LxController extends Controller
         return response()->json([
             'code' => 200,
             'msg' => '创建成功',
-            'data' => $department
+            'data' => [
+                '部门名称' => $department->name,
+                '简介' => $department->intro,
+                '技术栈' => $department->tech_stack,
+                '创建时间' => $department->created_at,
+                '更新时间' => $department->updated_at,
+            ]
         ]);
     }
 
@@ -213,8 +219,14 @@ class LxController extends Controller
 
         return response()->json([
             'code' => 200,
-            'msg' => '更新成功',
-            'data' => $department
+            'msg' => '创建成功',
+            'data' => [
+                '部门名称' => $department->name,
+                '简介' => $department->intro,
+                '技术栈' => $department->tech_stack,
+                '创建时间' => $department->created_at,
+                '更新时间' => $department->updated_at,
+            ]
         ]);
     }
 
