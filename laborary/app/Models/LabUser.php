@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 
 class LabUser extends Authenticatable
 {
-    use HasFactory;
-    use HasApiTokens, Notifiable;
+    use HasFactory, HasApiTokens, Notifiable;
     protected $table = 'lab_users';
 
     protected $fillable = [

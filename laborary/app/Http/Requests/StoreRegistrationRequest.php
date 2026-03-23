@@ -1,6 +1,6 @@
 <?php
 
-namespace app\Http\Requests;
+namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -16,12 +16,12 @@ class StoreRegistrationRequest extends FormRequest
     {
         return [
             // 身份验证字段
-            'account' => 'required|string',
-            'username'   => 'required|string',
+            'user_id' => 'required|string',
+            'name'   => 'required|string',
 
             // 业务字段
             'config_id'     => 'required|integer|exists:registration_configs,id',
-            'class'         => 'required|integer',
+            'class'         => 'required|string|max:50',
             'academy'       => 'required|string|max:100',
             'major'         => 'required|string|max:100',
             'director_name' => 'required|string|max:50',
@@ -32,8 +32,8 @@ class StoreRegistrationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'student_id.required' => '学号不能为空',
-            'username.required'   => '姓名不能为空',
+            'user_id.required' => '学号不能为空',
+            'name.required'   => '姓名不能为空',
             'config_id.required'  => '配置ID不能为空',
             'config_id.exists'    => '无效的报名配置',
             'class.required'      => '班级不能为空',

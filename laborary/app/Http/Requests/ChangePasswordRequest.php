@@ -21,8 +21,11 @@ class ChangePasswordRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'old_password' => '旧密码不能为空',
-            'new_password'   => '新密码不能为空',
+            'old_password.required' => '旧密码不能为空',
+            'old_password.min' => '旧密码至少6位',
+            'new_password.required' => '新密码不能为空',
+            'new_password.min' => '新密码至少6位',
+            'new_password.confirmed' => '两次输入的新密码不一致',
         ];
     }
 }

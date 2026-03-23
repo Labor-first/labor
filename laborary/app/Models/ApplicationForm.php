@@ -15,6 +15,7 @@ class ApplicationForm extends Model
     protected $fillable = [
         'config_id',//报名表配置ID
         'user_id',//('报名人ID,x学号');
+        'name',//姓名
         'status',//报名状态
         'audit_time',//审核时间
         'audit_remark',//审核备注/拒绝原因
@@ -28,7 +29,7 @@ class ApplicationForm extends Model
     protected $casts = [
         'status' => 'integer',
         'audit_time' => 'datetime',
-        'class' => 'integer',
+        'class' => 'string',
     ];
 
     const STATUS_PENDING = 1;   // 待审核

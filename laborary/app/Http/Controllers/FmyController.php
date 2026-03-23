@@ -7,7 +7,7 @@ use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\CheckRegistrationStatusRequest;
 use App\Http\Requests\CancelRegistrationRequest;
 use App\Http\Requests\StoreRegistrationRequest;
-
+use App\Http\Controllers\Controller;
 use App\Models\ApplicationForm;
 use App\Models\RegistrationConfig;
 use App\Models\LabUser; // 假设你的用户模型是 LabUser
@@ -28,8 +28,9 @@ class FmyController extends Controller
      */
     private function verifyStudentCredentials()
     {
-        $studentAccount = request('account');
-        $username = request('username');
+        $request = request();
+        $studentAccount = $request->input('user_id');
+        $username = $request->input('name');
 
         // 基础非空检查 (虽然 FormRequest 可能已校验，但为了双重保险保留)
         if (!$studentAccount || !$username) {
@@ -82,7 +83,7 @@ class FmyController extends Controller
     {
         // Sanctum: 获取当前认证用户
         /** @var \App\Models\LabUser $user */ //告诉IDE:“这个$user具体就是我的LabUser模型”
-        $user = Auth::guard('sanctum')->user();
+        $user = Auth::guard('api')->user();
         // 或者简写为: $user = auth('sanctum')->user();
         // 如果中间件已生效，也可以直接用 $user = request()->user();
 
@@ -118,7 +119,7 @@ class FmyController extends Controller
     {
         // 获取当前用户 (Sanctum)
         /** @var \App\Models\LabUser $user */
-        $user = Auth::guard('sanctum')->user();
+        $user = Auth::guard('api')->user();
 
         if (!$user) {
             return response()->json([
@@ -177,51 +178,87 @@ class FmyController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if (!$config) throw new Exception('报名配置不存在');
-                if ($config->is_open != 1) throw new Exception('报名通道已关闭');
+                if (!$config) {
+                    throw new Exception('报名配置不存在', 404);
+                }
+                if ($config->is_open != 1) {
+                    throw new Exception('报名通道已关闭', 403);
+                }
 
                 $exists = ApplicationForm::where('config_id', $data['config_id'])
                     ->where('user_id', $user->account)
                     ->exists();
 
-                if ($exists) throw new Exception('您已报名，请勿重复提交');
+                if ($exists) {
+                    throw new Exception('您已报名，请勿重复提交', 409);
+                }
 
-                return ApplicationForm::create([
-                    
+                $applicationForm = ApplicationForm::create([
                     'config_id'     => $data['config_id'],
+                    'name'          => $data['name'],
                     'class'         => $data['class'],
                     'academy'       => $data['academy'],
                     'major'         => $data['major'],
                     'director_name' => $data['director_name'],
                     'sign_reason'   => $data['sign_reason'],
-                    'user_id'       => $user->id,
+                    'user_id'       => $user->account,
                     'status'        => 1,
                 ]);
+
+                // 验证数据是否真正存入数据库
+                if (!$applicationForm || !$applicationForm->id) {
+                    throw new Exception('报名数据保存失败，请稍后重试', 500);
+                }
+
+                return $applicationForm;
             });
 
+            // 再次验证数据是否存在
+            $verifyRecord = ApplicationForm::where('id', $registration->id)->first();
+            if (!$verifyRecord) {
+                return response()->json([
+                    'code' => 500,
+                    'message' => '报名数据保存异常，请稍后重试',
+                    'data' => null
+                ], 500);
+            }
+
             return response()->json([
-                'code' => 200,
+                'code' => 201,
                 'message' => '报名成功',
                 'data' => $registration
             ], 201);
 
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
+            
+            // 根据错误信息智能判断状态码
             $msg = $e->getMessage();
             $statusCode = match(true) {
                 str_contains($msg, '已关闭') => 403,
-                str_contains($msg, '重复') => 403,
+                str_contains($msg, '重复') => 409,
                 str_contains($msg, '不存在') => 404,
-                default => 400
+                str_contains($msg, '保存失败') => 500,
+                str_contains($msg, '保存异常') => 500,
+                default => $statusCode
             };
+
+            Log::error('Registration Error: ' . $msg, [
+                'user_id' => $user->account ?? null,
+                'config_id' => $data['config_id'] ?? null,
+                'status_code' => $statusCode
+            ]);
+
             return response()->json([
                 'code' => $statusCode,
                 'message' => $msg,
                 'data' => null
             ], $statusCode);
-        }
-        catch (Throwable $e) {
-            Log::error('Registration Error: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::error('Registration System Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'code' => 500,
                 'message' => '系统繁忙，请稍后重试',
@@ -246,7 +283,7 @@ class FmyController extends Controller
         $configId = $request->validated()['config_id'];
 
         $registration = ApplicationForm::where('config_id', $configId)
-            ->where('user_id', $user->id)
+            ->where('user_id', $user->account)
             ->first();
 
         if (!$registration) {
@@ -286,13 +323,15 @@ class FmyController extends Controller
         $configId = $request->validated()['config_id'];
 
         try {
-            DB::transaction(function () use ($user, $configId) {
+            $cancelled = DB::transaction(function () use ($user, $configId) {
                 $registration = ApplicationForm::where('config_id', $configId)
-                    ->where('user_id', $user->id)
+                    ->where('user_id', $user->account)
                     ->lockForUpdate()
                     ->first();
 
-                if (!$registration) throw new Exception('未找到报名记录');
+                if (!$registration) {
+                    throw new Exception('未找到报名记录', 404);
+                }
 
                 if ($registration->status != 1) {
                     $statusText = match($registration->status) {
@@ -301,34 +340,70 @@ class FmyController extends Controller
                         4 => '已拒绝',
                         default => '未知'
                     };
-                    throw new Exception("当前状态（{$statusText}）无法撤销报名");
+                    throw new Exception("当前状态（{$statusText}）无法撤销报名", 403);
                 }
 
                 $registration->status = 3;
-                $registration->save();
+                $saved = $registration->save();
+
+                if (!$saved) {
+                    throw new Exception('撤销报名保存失败，请稍后重试', 500);
+                }
+
+                return $registration;
             });
+
+            // 验证撤销是否成功
+            $verifyRecord = ApplicationForm::where('id', $cancelled->id)
+                ->where('status', 3)
+                ->first();
+
+            if (!$verifyRecord) {
+                return response()->json([
+                    'code' => 500,
+                    'message' => '撤销报名验证失败，请稍后重试',
+                    'data' => null
+                ], 500);
+            }
 
             return response()->json([
                 'code' => 200,
                 'message' => '撤销报名成功',
-                'data' => ['status' => 'cancelled']
+                'data' => [
+                    'id' => $cancelled->id,
+                    'status' => 3,
+                    'status_text' => '已取消'
+                ]
             ]);
 
         } catch (Exception $e) {
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
+            
             $msg = $e->getMessage();
             $statusCode = match(true) {
                 str_contains($msg, '未找到') => 404,
                 str_contains($msg, '无法撤销') => 403,
-                default => 400
+                str_contains($msg, '保存失败') => 500,
+                str_contains($msg, '验证失败') => 500,
+                default => $statusCode
             };
+
+            Log::error('Cancel Registration Error: ' . $msg, [
+                'user_id' => $user->account ?? null,
+                'config_id' => $configId ?? null,
+                'status_code' => $statusCode
+            ]);
+
             return response()->json([
                 'code' => $statusCode,
                 'message' => $msg,
                 'data' => null
             ], $statusCode);
-        }
-        catch (Throwable $e) {
-            Log::error('Cancel Error: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::error('Cancel Registration System Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'code' => 500,
                 'message' => '系统繁忙，撤销失败',

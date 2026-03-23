@@ -68,6 +68,14 @@ Route::get('/test', function () {
     return response()->json(['msg' => 'API 正常工作']);
 });
 
+// 报名测试路由
+Route::get('/registration-test', function () {
+    return response()->json(['msg' => '报名路由正常', 'method' => 'GET']);
+});
+Route::post('/registration-test', function () {
+    return response()->json(['msg' => '报名路由正常', 'method' => 'POST', 'data' => request()->all()]);
+});
+
 // 公开接口（不需要登录）
 Route::get('/departments', [LxController::class, 'getDepartments']);
 Route::get('/departments/{id}', [LxController::class, 'getDepartmentDetail']);
@@ -75,7 +83,7 @@ Route::get('/lab-news', [LxController::class, 'getNewsList']);
 Route::get('/lab-news/{id}', [LxController::class, 'getNewsDetail']);
 
 
-Route::middleware('auth:sanctum')->prefix('/user')->group(function () {
+Route::middleware('auth:api')->prefix('/user')->group(function () {
 //获取个人信息
     Route::get('/me', [FmyController::class, 'me']);
 // 修改密码
@@ -85,6 +93,6 @@ Route::middleware('auth:sanctum')->prefix('/user')->group(function () {
 //提交报名
 Route::post('/registration', [FmyController::class, 'registrationStore']);
 //查看报名状态 (GET 请求，带参数 config_id)
-Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
+Route::get('/registration/status', [FmyController::class, 'CheckRegistrationStatus']);
 //撤销报名
 Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);

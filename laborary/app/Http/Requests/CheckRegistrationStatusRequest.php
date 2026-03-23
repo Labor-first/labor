@@ -15,16 +15,16 @@ class CheckRegistrationStatusRequest extends FormRequest
     {
         return [
             // 身份验证字段
-            'account' => 'required|string',
-            'username'   => 'required|string',
+            'user_id' => 'required|string',
+            'name'   => 'required|string',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'student_id.required' => '学号不能为空',
-            'username.required'   => '姓名不能为空',
+            'user_id.required' => '学号不能为空',
+            'name.required'   => '姓名不能为空',
         ];
     }
 }
