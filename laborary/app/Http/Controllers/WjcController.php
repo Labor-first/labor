@@ -19,7 +19,7 @@ class WjcController extends Controller
         $credentials = $request->only('account', 'password');
         $remember = $request->input('remember_me', false);
         
-        if (!$token = auth('api')->attempt($credentials)) {
+        if (!$token = JWTAuth::attempt($credentials)) {
             return response()->json([
                 'code' => 401,
                 'msg' => '账号密码错误或账号不存在',
@@ -27,7 +27,7 @@ class WjcController extends Controller
             ]);
         }
         
-        $user = auth('api')->user();
+        $user = JWTAuth::user();
         
         $ttl = $remember ? 60 * 24 * 7 : 60 * 24;
         JWTAuth::factory()->setTTL($ttl);

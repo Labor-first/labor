@@ -44,7 +44,6 @@ Route::prefix('lab-news')->group(function () {
     Route::delete('/{id}', [LxController::class, 'deleteNews']);
 });
 
-//无需登录的接口
 Route::prefix('/user')->group(function () {
     // 登录
     Route::post('/login', [WjcController::class, 'login']);
