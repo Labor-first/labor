@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('application_forms', function (Blueprint $table) {
             $table->id()->comment('报名记录ID，主键');
             $table->unsignedBigInteger('config_id')->comment('报名表配置ID');
-            $table->unsignedBigInteger('user_id')->comment('报名人ID');
+            $table->unsignedBigInteger('user_id')->comment('报名人ID，学号');
+            $table->string('name', 50)->comment('姓名');
             $table->tinyInteger('status')->default(1)->comment('报名状态(1:待审核,2:报名成功,3:已取消,4:审核拒绝)');
             $table->timestamp('audit_time')->nullable()->comment('审核时间');
             $table->text('audit_remark')->nullable()->comment('审核备注/拒绝原因');

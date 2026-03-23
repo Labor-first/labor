@@ -187,6 +187,7 @@ class FmyController extends Controller
                 if ($exists) throw new Exception('您已报名，请勿重复提交');
 
                 return ApplicationForm::create([
+                    
                     'config_id'     => $data['config_id'],
                     'class'         => $data['class'],
                     'academy'       => $data['academy'],
