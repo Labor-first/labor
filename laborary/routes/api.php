@@ -61,9 +61,9 @@ Route::middleware('auth:api')->prefix('/user')->group(function () {
     // 更新个人信息
     Route::post('/update-info', [WjcController::class, 'updateInfo']);
     //获取个人信息
-    Route::get('/user/me', [FmyController::class, 'me']);
+    Route::get('/me', [FmyController::class, 'me']);
     // 修改密码
-    Route::post('/user/change-password', [FmyController::class, 'changePassword']);
+    Route::post('/change-password', [FmyController::class, 'changePassword']);
     //提交报名
     Route::post('/registration', [FmyController::class, 'registrationStore']);
     //查看报名状态 (GET 请求，带参数 config_id)
