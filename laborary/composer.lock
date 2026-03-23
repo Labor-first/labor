@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "193f20da64493d41519961b643059f6a",
+    "content-hash": "b6b1e42c330c78367257c681e2ce3a28",
     "packages": [
         {
             "name": "brick/math",
@@ -1331,14 +1331,9 @@
         {
             "name": "laravel/sanctum",
             "version": "v4.3.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/laravel/sanctum.git",
-                "reference": "e3b85d6e36ad00e5db2d1dcc27c81ffdf15cbf76"
-            },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/sanctum/zipball/e3b85d6e36ad00e5db2d1dcc27c81ffdf15cbf76",
+                "url": "https://mirrors.cloud.tencent.com/repository/composer/laravel/sanctum/v4.3.1/laravel-sanctum-v4.3.1.zip",
                 "reference": "e3b85d6e36ad00e5db2d1dcc27c81ffdf15cbf76",
                 "shasum": ""
             },
@@ -1369,7 +1364,6 @@
                     "Laravel\\Sanctum\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],

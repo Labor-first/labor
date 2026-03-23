@@ -181,7 +181,7 @@ class FmyController extends Controller
                 if ($config->is_open != 1) throw new Exception('报名通道已关闭');
 
                 $exists = ApplicationForm::where('config_id', $data['config_id'])
-                    ->where('user_id', $user->id)
+                    ->where('user_id', $user->account)
                     ->exists();
 
                 if ($exists) throw new Exception('您已报名，请勿重复提交');

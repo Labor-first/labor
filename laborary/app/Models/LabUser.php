@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class LabUser extends Authenticatable
 {
     use HasFactory;
-
+    use HasApiTokens, Notifiable;
     protected $table = 'lab_users';
 
     protected $fillable = [
