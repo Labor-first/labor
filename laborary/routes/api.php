@@ -50,16 +50,7 @@ Route::middleware('auth:api')->prefix('/user')->group(function () {
     Route::post('/logout', [WjcController::class, 'logout']);
     // 更新个人信息
     Route::post('/update-info', [WjcController::class, 'updateInfo']);
-    //获取个人信息
-    Route::get('/me', [FmyController::class, 'me']);
-    // 修改密码
-    Route::post('/change-password', [FmyController::class, 'changePassword']);
-    //提交报名
-    Route::post('/registration', [FmyController::class, 'registrationStore']);
-    //查看报名状态 (GET 请求，带参数 config_id)
-    Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
-    //撤销报名
-    Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);
+
 });
 
 // 测试路由（不需要认证）
@@ -72,3 +63,18 @@ Route::get('/departments', [LxController::class, 'getDepartments']);
 Route::get('/departments/{id}', [LxController::class, 'getDepartmentDetail']);
 Route::get('/lab-news', [LxController::class, 'getNewsList']);
 Route::get('/lab-news/{id}', [LxController::class, 'getNewsDetail']);
+
+
+Route::middleware('auth:sanctum')->prefix('/user')->group(function () {
+//获取个人信息
+    Route::get('/me', [FmyController::class, 'me']);
+// 修改密码
+    Route::post('/change-password', [FmyController::class, 'changePassword']);
+});
+//报名系统
+//提交报名
+Route::post('/registration', [FmyController::class, 'registrationStore']);
+//查看报名状态 (GET 请求，带参数 config_id)
+Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
+//撤销报名
+Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);
