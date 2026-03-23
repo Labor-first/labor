@@ -18,19 +18,29 @@ Route::prefix('lab')->group(function () {
 
 // 部门相关
 Route::prefix('departments')->group(function () {
+    // 获取部门列表
     Route::get('/', [LxController::class, 'getDepartments']);
+    // 获取部门详情
     Route::get('/{id}', [LxController::class, 'getDepartmentDetail']);
+    // 创建部门
     Route::post('/', [LxController::class, 'createDepartment']);
+    // 更新部门
     Route::put('/{id}', [LxController::class, 'updateDepartment']);
+    // 删除部门
     Route::delete('/{id}', [LxController::class, 'deleteDepartment']);
 });
 
 // 新闻相关
 Route::prefix('lab-news')->group(function () {
+    // 获取新闻列表
     Route::get('/', [LxController::class, 'getNewsList']);
+    // 获取新闻详情
     Route::get('/{id}', [LxController::class, 'getNewsDetail']);
+    // 创建新闻
     Route::post('/', [LxController::class, 'createNews']);
+    // 更新新闻
     Route::put('/{id}', [LxController::class, 'updateNews']);
+    // 删除新闻
     Route::delete('/{id}', [LxController::class, 'deleteNews']);
 });
 
