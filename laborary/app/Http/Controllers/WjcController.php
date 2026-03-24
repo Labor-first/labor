@@ -83,13 +83,13 @@ class WjcController extends Controller
     }
 
     // 频率限制：先判断过期时间不为null，再判断时间范围（修复空对象调用问题）
-    if($user->activation_expire && $user->activation_expire->isAfter(now()->subMinute(1))){
-        return response()->json([
-            'code' => 429,
-            'msg' => '请勿频繁获取激活码，1分钟后重试',
-            'data' => null
-        ]);
-    }
+    // if($user->activation_expire && $user->activation_expire->isAfter(now()->subMinute(1))){
+    //     return response()->json([
+    //         'code' => 429,
+    //         'msg' => '请勿频繁获取激活码，1分钟后重试',
+    //         'data' => null
+    //     ]);
+    // }
     
     // 生成6位数字激活码（mt_rand 兼容所有Laravel版本）
     $activationCode = mt_rand(100000, 999999);
