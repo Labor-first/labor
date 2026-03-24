@@ -29,15 +29,17 @@ class DatabaseSeeder extends Seeder
                 'department_id' => null,
             ]
         );
-        LabUser::create([
-            'account' => 'wangjiachang',
-            'username' => '王佳畅',
-            'phone' => '18400000000',
-            'email' => 'wjc20070117@qq.com',
-            'password_hash' => Hash::make('123456'),
-            'is_active' => 1,
-            'role' => 1,
-            'department_id' => null,
-        ]);
+        LabUser::updateOrCreate(
+            ['account' => 'wangjiachang'],
+            [
+                'username' => '王佳畅',
+                'phone' => '18400000000',
+                'email' => 'wjc20070117@qq.com',
+                'password_hash' => Hash::make('123456'),
+                'is_active' => 1,
+                'role' => 1,
+                'department_id' => null,
+            ]
+        );
     }
 }
