@@ -12,8 +12,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // 自定义未认证异常响应
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'code' => 401,
+                    'message' => '未登录或登录已过期，请先登录',
+                    'data' => null
+                ], 401);
+            }
+        });
     })->create();

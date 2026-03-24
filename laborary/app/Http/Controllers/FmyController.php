@@ -1,386 +1,413 @@
 <?php
 
-namespace app\Http\Controllers;
+namespace App\Http\Controllers;
 
+// 引入 4 个 FormRequest 进行自动验证
+use App\Http\Requests\ChangePasswordRequest;
+use App\Http\Requests\CheckRegistrationStatusRequest;
+use App\Http\Requests\CancelRegistrationRequest;
+use App\Http\Requests\StoreRegistrationRequest;
+use App\Http\Controllers\Controller;
 use App\Models\ApplicationForm;
 use App\Models\RegistrationConfig;
+use App\Models\LabUser; // 假设你的用户模型是 LabUser
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Exception;
-use Throwable; // 用于捕获所有错误（包括系统级错误）
-use Tymon\JWTAuth\Exceptions\TokenExpiredException;
-use Tymon\JWTAuth\Exceptions\TokenInvalidException;
-use Tymon\JWTAuth\Exceptions\UserNotDefinedException;
-use Tymon\JWTAuth\Facades\JWTAuth;
+use Throwable;
+use Illuminate\Support\Facades\Auth; // 用于 Sanctum 认证
 
 class FmyController extends Controller
 {
-    // 获取个人信息
+    /**
+     * 辅助方法：通过学号和姓名验证用户身份 (免登录场景专用)
+     * 用于报名、查询、撤销等不需要 Token 的公开接口
+     */
+    private function verifyStudentCredentials()
+    {
+        $request = request();
+        $studentAccount = $request->input('user_id');
+        $username = $request->input('name');
+
+        // 基础非空检查 (虽然 FormRequest 可能已校验，但为了双重保险保留)
+        if (!$studentAccount || !$username) {
+            return [
+                'success' => false,
+                'response' => response()->json([
+                    'code' => 401,
+                    'message' => '缺少必要参数：需要提供 account (学号) 和 username (姓名)',
+                    'data' => null
+                ], 401)
+            ];
+        }
+
+        // 查询用户
+        // 注意：请确保数据库字段名与这里一致 (account, username)
+        $user = LabUser::where('account', $studentAccount)
+            ->where('username', $username)
+            ->first();
+
+        if (!$user) {
+            return [
+                'success' => false,
+                'response' => response()->json([
+                    'code' => 401,
+                    'message' => '学号与姓名不匹配，或未找到该用户',
+                    'data' => null
+                ], 401)
+            ];
+        }
+
+        // 检查账号是否被禁用 (is_active == 0)
+        if (isset($user->is_active) && $user->is_active == 0) {
+            return [
+                'success' => false,
+                'response' => response()->json([
+                    'code' => 403,
+                    'message' => '该账号未激活',
+                    'data' => null
+                ], 403)
+            ];
+        }
+
+        return ['success' => true, 'user' => $user];
+    }
+
+    /**
+     * 获取当前登录用户个人信息 (Sanctum 保护)
+     */
     public function me(): JsonResponse
     {
-        try {
-            $user = JWTAuth::parseToken()->authenticate();
+        // Sanctum: 获取当前认证用户
+        /** @var \App\Models\LabUser $user */ //告诉IDE:“这个$user具体就是我的LabUser模型”
+        $user = Auth::guard('api')->user();
+        // 或者简写为: $user = auth('sanctum')->user();
+        // 如果中间件已生效，也可以直接用 $user = request()->user();
 
-            if (!$user) {
-                return response()->json([
-                    'code' => 401,
-                    'message' => '用户未找到',
-                    'data' => null,
-                ], 401);
-            }
-
+        if (!$user) {
             return response()->json([
-                'code' => 200,
-                'message' => '获取成功',
-                'data' => [
-                    'id' => $user->id,
-                    'name' => $user->username, // 确保数据库字段名正确
-                    'phone' => $user->phone,
-                    'email' => $user->email,
-                    'is_active' => $user->is_active,
-                    'role' => $user->role,
-                    'department_id' => $user->department, // 确认字段名是 department 还是 department_id
-                    'last_login_at' => $user->last_login_at,
-                ]
-            ]);
-        } catch (TokenExpiredException $e) {
-            return response()->json(['code' => 401, 'message' => 'Token 已过期', 'data' => null], 401);
-        } catch (TokenInvalidException $e) {
-            return response()->json(['code' => 401, 'message' => 'Token 无效', 'data' => null], 401);
-        } catch (UserNotDefinedException $e) {
-            return response()->json(['code' => 401, 'message' => '用户不存在', 'data' => null], 401);
-        } catch (Throwable $e) {
-            return response()->json(['code' => 500, 'message' => '服务器内部错误: ' . $e->getMessage(), 'data' => null], 500);
+                'code' => 401,
+                'message' => '用户未登录或认证失败',
+                'data' => null
+            ], 401);
         }
+
+        return response()->json([
+            'code' => 200,
+            'message' => '获取成功',
+            'data' => [
+                'id' => $user->id,
+                'account' => $user->account, // 兼容字段
+                'username' => $user->username,
+                'phone' => $user->phone,
+                'email' => $user->email,
+                'is_active' => $user->is_active,
+                'role' => $user->role,
+                'department_id' => $user->department_id,
+                'last_login_at' => $user->last_login_at,
+            ]
+        ]);
     }
 
-    //修改密码
-    public function changePassword(): JsonResponse
+    /**
+     * 修改密码 (Sanctum 保护 + ChangePasswordRequest 验证)
+     */
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
     {
-        try {
-            $user = JWTAuth::parseToken()->authenticate();
-            if (!$user) {
-                return response()->json(['code' => 401, 'message' => '用户未找到', 'data' => null], 401);
-            }
+        // 获取当前用户 (Sanctum)
+        /** @var \App\Models\LabUser $user */
+        $user = Auth::guard('api')->user();
 
-            $validator = Validator::make(request()->all(), [
-                'old_password' => 'required|string|min:6',
-                'new_password' => 'required|string|min:6|confirmed', // confirmed 意味着需要 new_password_confirmation 字段
-            ]);
-
-            if ($validator->fails()) {
-                // 4. 验证失败返回 422
-                return response()->json([
-                    'code' => 422,
-                    'message' => '参数验证失败',
-                    'data' => null,
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $data = $validator->validated();
-
-            // 验证旧密码
-            if (!Hash::check($data['old_password'], $user->password)) {
-                // 5. 业务逻辑错误返回 400 或 403，不要用 401
-                return response()->json([
-                    'code' => 400,
-                    'message' => '旧密码错误',
-                    'data' => null
-                ], 400);
-            }
-
-            // 更新密码
-            $user->password = Hash::make($data['new_password']);
-            $user->save();
-
-            // 生成新 Token (可选策略：也可以选择不返回新 Token，强制用户重新登录以销毁所有旧会话)
-            $newToken = JWTAuth::fromUser($user);
-
+        if (!$user) {
             return response()->json([
-                'code' => 200,
-                'message' => '密码修改成功',
-                'data' => null,
-                'token' => $newToken,
-            ]);
-
-        } catch (TokenExpiredException $e) {
-            return response()->json(['code' => 401, 'message' => 'Token 已过期', 'data' => null], 401);
-        } catch (TokenInvalidException $e) {
-            return response()->json(['code' => 401, 'message' => 'Token 无效', 'data' => null], 401);
-        } catch (UserNotDefinedException $e) {
-            return response()->json(['code' => 401, 'message' => '用户不存在', 'data' => null], 401);
-        } catch (Throwable $e) {
-            // 捕获所有其他未知错误
-            return response()->json([
-                'code' => 500,
-                'message' => '修改失败，服务器内部出错',
-                'data' => null,
-            ], 500);
+                'code' => 401,
+                'message' => '用户未找到',
+                'data' => null
+            ], 401);
         }
+
+        //获取已验证的数据 (FormRequest 自动处理了验证失败，能到这里说明数据合法)
+        $data = $request->validated();
+
+        //验证旧密码
+        if (!Hash::check($data['old_password'], $user->password)) {
+            return response()->json([
+                'code' => 400,
+                'message' => '旧密码错误',
+                'data' => null
+            ], 400);
+        }
+
+        //更新密码
+        $user->password = Hash::make($data['new_password']);
+        $user->save();
+
+        // Sanctum 不需要重新颁发 Token (除非你想让旧 Token 失效，那需要额外逻辑)
+        // 通常前端保留当前Token即可，或者前端选择重新登录
+
+        return response()->json([
+            'code' => 200,
+            'message' => '密码修改成功',
+            'data' => null
+        ]);
     }
 
-    // 提交报名
-    public function registrationStore(): JsonResponse
+
+    /**
+     * 提交报名 (免登录 + StoreRegistrationRequest 验证)
+     */
+    public function registrationStore(StoreRegistrationRequest $request): JsonResponse
     {
+        //身份业务验证 (学号 + 姓名)
+        $validation = $this->verifyStudentCredentials();
+        if (!$validation['success']) {
+            return $validation['response'];
+        }
+        $user = $validation['user'];
+
+        //获取已验证的数据 (由 StoreRegistrationRequest 保证)
+        $data = $request->validated();
+
         try {
-            $user = JWTAuth::parseToken()->authenticate();
-            if (!$user) {
-                return response()->json([
-                    'code' => 401,
-                    'message' => '用户未找到或令牌无效',
-                    'data' => null], 401);
-            }
-
-            $validator = Validator::make(request()->all(), [
-                'config_id'     => 'required|integer|exists:registration_configs,id',
-                'class'         => 'required|integer',
-                'academy'       => 'required|string|max:100',
-                'major'         => 'required|string|max:100',
-                'director_name' => 'required|string|max:50',
-                'sign_reason'   => 'required|string|min:10|max:500'
-            ], [
-                'config_id.required'     => '配置ID不能为空',
-                'config_id.exists'       => '无效的报名配置',
-                'class.required'         => '班级不能为空',
-                'academy.required'       => '学院不能为空',
-                'major.required'         => '专业不能为空',
-                'director_name.required' => '导员姓名不能为空',
-                'sign_reason.required'   => '申请理由不能为空',
-                'sign_reason.min'        => '申请理由不能少于10个字',
-                'sign_reason.max'        => '申请理由不能超过500个字',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'code' => 422, // 修正为 422
-                    'message' => '参数验证失败',
-                    'data' => null,
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $data = $validator->validated();
-
             $registration = DB::transaction(function () use ($user, $data) {
+                // 锁行防止超卖或并发问题
                 $config = RegistrationConfig::where('id', $data['config_id'])
                     ->lockForUpdate()
                     ->first();
 
                 if (!$config) {
-                    throw new Exception('报名配置不存在');
+                    throw new Exception('报名配置不存在', 404);
                 }
-
                 if ($config->is_open != 1) {
-                    throw new Exception('报名通道已关闭');
+                    throw new Exception('报名通道已关闭', 403);
                 }
 
                 $exists = ApplicationForm::where('config_id', $data['config_id'])
-                    ->where('user_id', $user->id)
+                    ->where('user_id', $user->account)
                     ->exists();
 
                 if ($exists) {
-                    throw new Exception('您已报名，请勿重复提交');
+                    throw new Exception('您已报名，请勿重复提交', 409);
                 }
 
-                $createData = array_merge($data, [
-                    'user_id' => $user->id,
-                    'status'  => 1,
+                $applicationForm = ApplicationForm::create([
+                    'config_id'     => $data['config_id'],
+                    'name'          => $data['name'],
+                    'class'         => $data['class'],
+                    'academy'       => $data['academy'],
+                    'major'         => $data['major'],
+                    'director_name' => $data['director_name'],
+                    'sign_reason'   => $data['sign_reason'],
+                    'user_id'       => $user->account,
+                    'status'        => 1,
                 ]);
 
-                return ApplicationForm::create($createData);
+                // 验证数据是否真正存入数据库
+                if (!$applicationForm || !$applicationForm->id) {
+                    throw new Exception('报名数据保存失败，请稍后重试', 500);
+                }
+
+                return $applicationForm;
             });
 
+            // 再次验证数据是否存在
+            $verifyRecord = ApplicationForm::where('id', $registration->id)->first();
+            if (!$verifyRecord) {
+                return response()->json([
+                    'code' => 500,
+                    'message' => '报名数据保存异常，请稍后重试',
+                    'data' => null
+                ], 500);
+            }
+
             return response()->json([
-                'code' => 200,
+                'code' => 201,
                 'message' => '报名成功',
                 'data' => $registration
             ], 201);
 
         } catch (Exception $e) {
-            // 捕获业务逻辑异常
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
+            
+            // 根据错误信息智能判断状态码
             $msg = $e->getMessage();
-            $statusCode = 400;
+            $statusCode = match(true) {
+                str_contains($msg, '已关闭') => 403,
+                str_contains($msg, '重复') => 409,
+                str_contains($msg, '不存在') => 404,
+                str_contains($msg, '保存失败') => 500,
+                str_contains($msg, '保存异常') => 500,
+                default => $statusCode
+            };
 
-            if (str_contains($msg, '已关闭')) $statusCode = 403;
-            if (str_contains($msg, '重复')) $statusCode = 403;
-            if (str_contains($msg, '不存在')) $statusCode = 404;
+            Log::error('Registration Error: ' . $msg, [
+                'user_id' => $user->account ?? null,
+                'config_id' => $data['config_id'] ?? null,
+                'status_code' => $statusCode
+            ]);
 
             return response()->json([
                 'code' => $statusCode,
                 'message' => $msg,
-                'data' => null,
+                'data' => null
             ], $statusCode);
-
         } catch (Throwable $e) {
-            // 6. 捕获系统级异常 (如数据库死锁)
-            // 建议这里记录日志 Log::error($e);
+            Log::error('Registration System Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'code' => 500,
                 'message' => '系统繁忙，请稍后重试',
-                'data' => null,
+                'data' => null
             ], 500);
         }
     }
 
-    //查看报名状态
-    public function getRegistrationStatus(): JsonResponse
+    /**
+     * 查看报名状态 (免登录 + CheckRegistrationStatusRequest 验证)
+     */
+    public function CheckRegistrationStatus(CheckRegistrationStatusRequest $request): JsonResponse
     {
-        try {
-            // 1. 用户认证
-            $user = JWTAuth::parseToken()->authenticate();
-            if (!$user) {
-                return response()->json(['code' => 401, 'message' => '用户未找到', 'data' => null], 401);
-            }
-
-            // 2. 验证参数
-            $validator = Validator::make(request()->all(), [
-                'config_id' => 'required|integer|exists:registration_configs,id',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'code' => 422,
-                    'message' => '参数验证失败',
-                    'data' => null,
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $configId = $validator->validated()['config_id'];
-
-            // 3. 查询报名记录 (只查当前用户的)
-            $registration = ApplicationForm::where('config_id', $configId)
-                ->where('user_id', $user->id)
-                // 如果做了软删除，加上 .withTrashed() 根据需要
-                ->first();
-
-            if (!$registration) {
-                return response()->json([
-                    'code' => 404,
-                    'message' => '您尚未报名',
-                    'data' => ['has_registered' => false]
-                ], 404);
-            }
-
-            // 定义状态映射 (根据你数据库的实际状态值调整)
-            $statusMap = [
-                1 => '待审核',
-                2 => '审核通过',
-                3 => '审核拒绝',
-                4 => '已取消',
-            ];
-
-            return response()->json([
-                'code' => 200,
-                'message' => '查询成功',
-                'data' => [
-                    'has_registered' => true,
-                    'id' => $registration->id,
-                    'status' => $registration->status,
-                    'status_text' => $statusMap[$registration->status] ?? '未知状态',
-                    'created_at' => $registration->created_at,
-                    'can_cancel' => $registration->status == 1, // 只有待审核状态允许取消
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json(['code' => 500, 'message' => '查询失败: ' . $e->getMessage(), 'data' => null], 500);
+        //身份业务验证
+        $validation = $this->verifyStudentCredentials();
+        if (!$validation['success']) {
+            return $validation['response'];
         }
+        $user = $validation['user'];
+
+        //获取 config_id (由 FormRequest 验证过)
+        $configId = $request->validated()['config_id'];
+
+        $registration = ApplicationForm::where('config_id', $configId)
+            ->where('user_id', $user->account)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'code' => 404,
+                'message' => '您尚未报名',
+                'data' => null
+            ], 404);
+        }
+
+        $statusMap = [1 => '待审核', 2 => '审核通过', 3 => '已取消', 4 => '审核拒绝'];
+
+        return response()->json([
+            'code' => 200,
+            'message' => '查询成功',
+            'data' => [
+                'id' => $registration->id,
+                'status' => $registration->status,
+                'status_text' => $statusMap[$registration->status]
+            ]
+        ]);
     }
 
-    //撤销报名
-    public function cancelRegistration(): JsonResponse
+    /**
+     * 撤销报名 (免登录 + CancelRegistrationRequest 验证)
+     */
+    public function cancelRegistration(CancelRegistrationRequest $request): JsonResponse
     {
+        //身份业务验证
+        $validation = $this->verifyStudentCredentials();
+        if (!$validation['success']) {
+            return $validation['response'];
+        }
+        $user = $validation['user'];
+
+        //获取 config_id
+        $configId = $request->validated()['config_id'];
+
         try {
-            // 1. 用户认证
-            $user = JWTAuth::parseToken()->authenticate();
-            if (!$user) {
-                return response()->json(['code' => 401, 'message' => '用户未找到', 'data' => null], 401);
-            }
-
-            // 2. 验证参数
-            $validator = Validator::make(request()->all(), [
-                'config_id' => 'required|integer|exists:registration_configs,id',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'code' => 422,
-                    'message' => '参数验证失败',
-                    'data' => null,
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $data = $validator->validated();
-            $configId = $data['config_id'];
-
-            // 3. 开启事务 (涉及状态变更和可能的名额回滚，必须原子化)
-            $result = DB::transaction(function () use ($user, $configId) {
-
-                // 4. 锁定并查询报名记录 (lockForUpdate 防止并发撤销导致状态错乱)
+            $cancelled = DB::transaction(function () use ($user, $configId) {
                 $registration = ApplicationForm::where('config_id', $configId)
-                    ->where('user_id', $user->id)
+                    ->where('user_id', $user->account)
                     ->lockForUpdate()
                     ->first();
 
                 if (!$registration) {
-                    throw new Exception('未找到报名记录');
+                    throw new Exception('未找到报名记录', 404);
                 }
 
-                // 5. 状态检查：只有“待审核”(假设 status=1) 可以取消
-                // 如果业务允许“审核通过”也能取消，请修改此条件
                 if ($registration->status != 1) {
-                    throw new Exception('当前状态（' . ($registration->status == 2 ? '已通过' : '已拒绝/已取消') . '）无法撤销报名');
+                    $statusText = match($registration->status) {
+                        2 => '已通过',
+                        3 => '已取消',
+                        4 => '已拒绝',
+                        default => '未知'
+                    };
+                    throw new Exception("当前状态（{$statusText}）无法撤销报名", 403);
                 }
 
-                // 6. 执行撤销逻辑
+                $registration->status = 3;
+                $saved = $registration->save();
 
-                // 方案 A: 仅更新状态为“已取消” (推荐，保留数据痕迹)
-                $registration->status = 4; // 假设 4 代表已取消
-                $registration->save();
-
-                // 方案 B: 如果配置表里有“当前报名人数”字段，需要减 1 (防止超卖的反向操作)
-                // 注意：这里也需要锁住 config 表，或者依赖上面的 registration 锁间接保证安全
-                // 如果你的 registration_configs 表有 current_count 字段：
-                /*
-                $config = RegistrationConfig::where('id', $configId)->lockForUpdate()->first();
-                if ($config && $config->current_count > 0) {
-                    $config->decrement('current_count');
+                if (!$saved) {
+                    throw new Exception('撤销报名保存失败，请稍后重试', 500);
                 }
-                */
 
-                return true;
+                return $registration;
             });
+
+            // 验证撤销是否成功
+            $verifyRecord = ApplicationForm::where('id', $cancelled->id)
+                ->where('status', 3)
+                ->first();
+
+            if (!$verifyRecord) {
+                return response()->json([
+                    'code' => 500,
+                    'message' => '撤销报名验证失败，请稍后重试',
+                    'data' => null
+                ], 500);
+            }
 
             return response()->json([
                 'code' => 200,
                 'message' => '撤销报名成功',
-                'data' => ['status' => 'cancelled']
+                'data' => [
+                    'id' => $cancelled->id,
+                    'status' => 3,
+                    'status_text' => '已取消'
+                ]
             ]);
 
         } catch (Exception $e) {
-            // 捕获业务逻辑异常
+            $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
+            
             $msg = $e->getMessage();
-            $statusCode = 400;
-            if (str_contains($msg, '未找到')) $statusCode = 404;
-            if (str_contains($msg, '无法撤销')) $statusCode = 403; // 禁止操作
+            $statusCode = match(true) {
+                str_contains($msg, '未找到') => 404,
+                str_contains($msg, '无法撤销') => 403,
+                str_contains($msg, '保存失败') => 500,
+                str_contains($msg, '验证失败') => 500,
+                default => $statusCode
+            };
+
+            Log::error('Cancel Registration Error: ' . $msg, [
+                'user_id' => $user->account ?? null,
+                'config_id' => $configId ?? null,
+                'status_code' => $statusCode
+            ]);
 
             return response()->json([
                 'code' => $statusCode,
                 'message' => $msg,
-                'data' => null,
+                'data' => null
             ], $statusCode);
-
-        } catch (\Throwable $e) {
-            // 捕获系统级异常
+        } catch (Throwable $e) {
+            Log::error('Cancel Registration System Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'code' => 500,
                 'message' => '系统繁忙，撤销失败',
-                'data' => null,
+                'data' => null
             ], 500);
         }
     }
