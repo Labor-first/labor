@@ -16,6 +16,16 @@ class Department extends Model
         return Carbon::instance($date)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s');
     }
 
+    public function getCreatedAtAttribute($value)
+    {
+        return $value ? Carbon::parse($value)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s') : null;
+    }
+
+    public function getUpdatedAtAttribute($value)
+    {
+        return $value ? Carbon::parse($value)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s') : null;
+    }
+
     protected $fillable = [
         'name',//部门名称
         'intro',//部门介绍
