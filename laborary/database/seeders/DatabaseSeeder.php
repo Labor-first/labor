@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
                 'phone' => '13800000000',
                 'email' => '3258599349@qq.com',
                 'password_hash' => Hash::make('123456'),
-                'is_active' => 1,
+                'is_active' => 0,
                 'role' => 2,
                 'department_id' => null,
             ]
@@ -48,7 +48,7 @@ class DatabaseSeeder extends Seeder
                 'phone' => '18500000000',
                 'email' => '3227605507@qq.com',
                 'password_hash' => Hash::make('123456'),
-                'is_active' => 1,
+                'is_active' => 0,
                 'role' => 1,
                 'department_id' => null,
             ]
