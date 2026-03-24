@@ -11,10 +11,7 @@ use App\Http\Controllers\Admin\ApplicationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SystemController;
 
-/* ==========================================================================
-   1. 公开接口 (不需要登录 / Public Routes)
-   任何人都可以访问，通常用于登录前获取数据或执行登录操作
-   ========================================================================== */
+
 
 // [测试] 检查 API 服务是否正常运行，返回当前时间
 Route::get('/test', function () {
@@ -84,10 +81,7 @@ Route::get('/lab-news', [LxController::class, 'getNewsList']);                  
 Route::get('/lab-news/{id}', [LxController::class, 'getNewsDetail']);            // [读取] 新闻详情
 
 
-/* ==========================================================================
-   2. 需要登录的接口 (Protected Routes)
-   必须携带有效的 JWT Token (auth:api) 才能访问
-   ========================================================================== */
+
 Route::middleware('auth:api')->group(function () {
 
     // --- 用户个人中心 (需登录) ---
@@ -117,10 +111,7 @@ Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']
 
 
 
-/* ==========================================================================
-   3. 管理后台路由组 (Admin Routes)
-   必须同时满足：1. 已登录 (auth:sanctum)  2. 具有管理员角色 (admin.role)
-   ========================================================================== */
+
 Route::middleware(['auth:api'])->prefix('admin')->group(function () {
     // --- 报名管理 (管理员专用) ---
     // [读取] 获取所有报名记录列表（支持筛选/搜索）

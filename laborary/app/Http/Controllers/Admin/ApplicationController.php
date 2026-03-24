@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Application;
-use App\Models\User;
+use App\Models\ApplicationForm;
+use App\Models\LabUser;
 use App\Services\ExcelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,15 +25,15 @@ class ApplicationController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Application::with(['user' => function($q) {
-            $q->select('id', 'student_id', 'name', 'email', 'phone');
+        $query = ApplicationForm::with(['user' => function($q) {
+            $q->select('id', 'account', 'username', 'email', 'phone');
         }]);
 
-        // 搜索：学号/姓名/手机号
+        // 搜索：账号/用户名/手机号
         if ($keyword = $request->input('keyword')) {
             $query->whereHas('user', function($q) use ($keyword) {
-                $q->where('name', 'like', "%{$keyword}%")
-                  ->orWhere('student_id', 'like', "%{$keyword}%")
+                $q->where('username', 'like', "%{$keyword}%")
+                  ->orWhere('account', 'like', "%{$keyword}%")
                   ->orWhere('phone', 'like', "%{$keyword}%");
             });
         }
@@ -41,11 +41,6 @@ class ApplicationController extends Controller
         // 筛选：状态
         if ($status = $request->input('status')) {
             $query->where('status', $status);
-        }
-
-        // 筛选：部门
-        if ($department = $request->input('department')) {
-            $query->where('department', $department);
         }
 
         // 排序：最新在前
@@ -68,14 +63,14 @@ class ApplicationController extends Controller
     public function audit(Request $request, $id)
     {
         $request->validate([
-            'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
-            'review_comment' => 'nullable|string|max:500'
+            'status' => ['required', Rule::in([1, 2, 3, 4])],
+            'audit_remark' => 'nullable|string|max:500'
         ]);
 
-        $application = Application::findOrFail($id);
+        $application = ApplicationForm::findOrFail($id);
 
         // 状态变更验证
-        if ($application->status === 'approved' && $request->status === 'pending') {
+        if ($application->status === 2 && $request->status === 1) {
             return response()->json([
                 'success' => false,
                 'message' => '已录取的报名不能退回待审核状态'
@@ -85,13 +80,12 @@ class ApplicationController extends Controller
         // 更新状态和审核意见
         $application->update([
             'status' => $request->status,
-            'review_comment' => $request->review_comment,
-            'reviewed_at' => now(),
-            'reviewer_id' => $request->user()->id
+            'audit_remark' => $request->audit_remark,
+            'audit_time' => now()
         ]);
 
         // 如果通过，可触发后续逻辑（如发送通知邮件）
-        if ($request->status === 'approved') {
+        if ($request->status === 2) {
             // TODO: 发送录取通知邮件
             // Mail::to($application->user->email)->send(new ApprovedNotification($application));
         }
@@ -109,22 +103,25 @@ class ApplicationController extends Controller
      */
     public function export(Request $request)
     {
-        $status = $request->input('status', 'approved'); // 默认导出通过的
+        $status = $request->input('status', 2); // 默认导出通过的
 
-        $applications = Application::with('user')
+        $applications = ApplicationForm::with('user')
             ->where('status', $status)
             ->get();
 
         // 准备导出数据
         $data = $applications->map(function($app) {
             return [
-                '学号' => $app->user->student_id,
-                '姓名' => $app->user->name,
+                '账号' => $app->user->account,
+                '用户名' => $app->user->username,
                 '手机号' => $app->user->phone,
                 '邮箱' => $app->user->email,
-                '部门' => $app->department,
+                '姓名' => $app->name,
+                '班级' => $app->class,
+                '学院' => $app->academy,
+                '专业' => $app->major,
                 '状态' => $this->getStatusText($app->status),
-                '审核意见' => $app->review_comment,
+                '审核意见' => $app->audit_remark,
                 '报名时间' => $app->created_at->format('Y-m-d H:i:s')
             ];
         })->toArray();
@@ -142,10 +139,10 @@ class ApplicationController extends Controller
     private function getStatusText($status)
     {
         $map = [
-            'pending' => '待审核',
-            'approved' => '已通过',
-            'rejected' => '已拒绝',
-            'cancelled' => '已取消'
+            1 => '待审核',
+            2 => '已通过',
+            3 => '已取消',
+            4 => '已拒绝'
         ];
         return $map[$status] ?? $status;
     }
