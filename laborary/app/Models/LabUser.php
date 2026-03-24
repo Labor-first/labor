@@ -15,17 +15,7 @@ class LabUser extends Authenticatable implements JWTSubject
 {
     use HasFactory, HasApiTokens, Notifiable;
 
-    // JWT 身份标识方法
-    public function getJWTIdentifier()
-    {
-        return $this->getKey();
-    }
 
-    // JWT 自定义声明方法
-    public function getJWTCustomClaims()
-    {
-        return [];
-    }
 
     protected function serializeDate(\DateTimeInterface $date): string
     {
