@@ -11,10 +11,7 @@ use App\Http\Controllers\Admin\ApplicationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SystemController;
 
-/* ==========================================================================
-   1. 公开接口 (不需要登录 / Public Routes)
-   任何人都可以访问，通常用于登录前获取数据或执行登录操作
-   ========================================================================== */
+
 
 // [测试] 检查 API 服务是否正常运行，返回当前时间
 Route::get('/test', function () {
@@ -26,10 +23,10 @@ Route::prefix('lab')->group(function () {
     // [读取] 获取实验室的全局配置信息
     Route::get('/config', [LxController::class, 'getLabConfig']);
 
-    // [写入] 保存/更新实验室配置 
+    // [写入] 保存/更新实验室配置
     Route::post('/config', [LxController::class, 'saveLabConfig']);
 
-    // [删除] 删除实验室配置 
+    // [删除] 删除实验室配置
     Route::delete('/config', [LxController::class, 'deleteLabConfig']);
 });
 
@@ -42,9 +39,9 @@ Route::prefix('departments')->group(function () {
 
     //新增一个部门
     Route::post('/', [LxController::class, 'createDepartment']);
-    // 修改指定 ID 的部门信息 
+    // 修改指定 ID 的部门信息
     Route::put('/{id}', [LxController::class, 'updateDepartment']);
-    // 删除指定 ID 的部门 
+    // 删除指定 ID 的部门
     Route::delete('/{id}', [LxController::class, 'deleteDepartment']);
 });
 
@@ -55,11 +52,11 @@ Route::prefix('lab-news')->group(function () {
     // [读取] 获取指定 ID 的新闻详细内容
     Route::get('/{id}', [LxController::class, 'getNewsDetail']);
 
-    // 发布新新闻 
+    // 发布新新闻
     Route::post('/', [LxController::class, 'createNews']);
-    // 编辑指定 ID 的新闻 
+    // 编辑指定 ID 的新闻
     Route::put('/{id}', [LxController::class, 'updateNews']);
-    // 删除指定 ID 的新闻 
+    // 删除指定 ID 的新闻
     Route::delete('/{id}', [LxController::class, 'deleteNews']);
 });
 
@@ -84,10 +81,7 @@ Route::get('/lab-news', [LxController::class, 'getNewsList']);                  
 Route::get('/lab-news/{id}', [LxController::class, 'getNewsDetail']);            // [读取] 新闻详情
 
 
-/* ==========================================================================
-   2. 需要登录的接口 (Protected Routes)
-   必须携带有效的 JWT Token (auth:api) 才能访问
-   ========================================================================== */
+
 Route::middleware('auth:api')->group(function () {
 
     // --- 用户个人中心 (需登录) ---
@@ -103,25 +97,22 @@ Route::middleware('auth:api')->group(function () {
 
         // [安全] 修改登录密码
         Route::post('/change-password', [FmyController::class, 'changePassword']);
-
-        // --- 报名业务 (需登录) ---
-        // [提交] 提交新的报名表单
-        Route::post('/registration', [FmyController::class, 'registrationStore']);
-
-        // [查询] 查看当前用户的报名状态（需传参 config_id）
-        Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
-
-        // [撤销] 取消/撤回已提交的报名申请
-        Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);
     });
 });
 
+// [提交] 提交新的报名表单
+Route::post('/registration', [FmyController::class, 'registrationStore']);
 
-/* ==========================================================================
-   3. 管理后台路由组 (Admin Routes)
-   必须同时满足：1. 已登录 (auth:sanctum)  2. 具有管理员角色 (admin.role)
-   ========================================================================== */
-Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function () {
+// [查询] 查看当前用户的报名状态（需传参 config_id）
+Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
+
+// [撤销] 取消/撤回已提交的报名申请
+Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);
+
+
+
+
+Route::middleware(['auth:api'])->prefix('admin')->group(function () {
     // --- 报名管理 (管理员专用) ---
     // [读取] 获取所有报名记录列表（支持筛选/搜索）
     Route::get('/applications', [ApplicationController::class, 'index']);
@@ -144,6 +135,9 @@ Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function (
 
     // [导入] 批量导入用户数据（从 Excel 等文件）
     Route::post('/users/import', [UserController::class, 'import']);
+
+    // [模板] 下载用户导入模板
+    Route::get('/users/template', [UserController::class, 'template']);
 
     // --- 系统设置 (管理员专用) ---
     // [开关] 控制报名通道的开启或关闭

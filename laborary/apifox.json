@@ -1,0 +1,748 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Laborary Admin API",
+    "description": "后台管理接口文档",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "本地开发服务器"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Application",
+      "description": "报名管理接口"
+    },
+    {
+      "name": "User",
+      "description": "用户管理接口"
+    },
+    {
+      "name": "System",
+      "description": "系统管理接口"
+    }
+  ],
+  "paths": {
+    "/api/admin/applications": {
+      "get": {
+        "tags": ["Application"],
+        "summary": "获取报名列表",
+        "description": "分页、搜索、筛选报名数据",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "搜索关键词（账号/姓名/手机号）",
+            "schema": {
+              "type": "string"
+            },
+            "example": "张三"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "状态筛选（1=待审核, 2=已通过, 3=已取消, 4=已拒绝）",
+            "schema": {
+              "type": "integer",
+              "enum": [1, 2, 3, 4]
+            },
+            "example": 1
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "type": "integer",
+              "default": 15
+            },
+            "example": 15
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取报名列表",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "current_page": 1,
+                    "data": [
+                      {
+                        "id": 1,
+                        "user_id": 1,
+                        "config_id": 1,
+                        "name": "张三",
+                        "class": "计算机2201班",
+                        "academy": "信息学院",
+                        "major": "计算机科学与技术",
+                        "sign_reason": "对实验室研究方向很感兴趣，希望加入学习",
+                        "status": 1,
+                        "audit_time": null,
+                        "audit_remark": null,
+                        "created_at": "2024-01-15T10:30:00.000000Z",
+                        "updated_at": "2024-01-15T10:30:00.000000Z",
+                        "user": {
+                          "id": 1,
+                          "account": "2021001",
+                          "username": "张三",
+                          "email": "zhangsan@example.com",
+                          "phone": "13800138000"
+                        }
+                      },
+                      {
+                        "id": 2,
+                        "user_id": 2,
+                        "config_id": 1,
+                        "name": "李四",
+                        "class": "软件2202班",
+                        "academy": "信息学院",
+                        "major": "软件工程",
+                        "sign_reason": "想提升自己的实践能力",
+                        "status": 2,
+                        "audit_time": "2024-01-16T09:00:00.000000Z",
+                        "audit_remark": "表现优秀，同意录取",
+                        "created_at": "2024-01-14T14:20:00.000000Z",
+                        "updated_at": "2024-01-16T09:00:00.000000Z",
+                        "user": {
+                          "id": 2,
+                          "account": "2021002",
+                          "username": "李四",
+                          "email": "lisi@example.com",
+                          "phone": "13900139000"
+                        }
+                      }
+                    ],
+                    "first_page_url": "http://localhost:8000/api/admin/applications?page=1",
+                    "from": 1,
+                    "last_page": 1,
+                    "last_page_url": "http://localhost:8000/api/admin/applications?page=1",
+                    "next_page_url": null,
+                    "path": "http://localhost:8000/api/admin/applications",
+                    "per_page": 15,
+                    "prev_page_url": null,
+                    "to": 2,
+                    "total": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/applications/{id}/audit": {
+      "put": {
+        "tags": ["Application"],
+        "summary": "审核报名",
+        "description": "更新报名状态和审核意见",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "报名ID",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {
+                    "type": "integer",
+                    "enum": [1, 2, 3, 4],
+                    "description": "审核状态：1=待审核, 2=已通过, 3=已取消, 4=已拒绝"
+                  },
+                  "audit_remark": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "审核意见"
+                  }
+                }
+              },
+              "example": {
+                "status": 2,
+                "audit_remark": "表现优秀，同意录取"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "审核成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "审核通过，已录取",
+                  "data": {
+                    "id": 1,
+                    "user_id": 1,
+                    "name": "张三",
+                    "class": "计算机2201班",
+                    "academy": "信息学院",
+                    "major": "计算机科学与技术",
+                    "sign_reason": "对实验室研究方向很感兴趣，希望加入学习",
+                    "status": 2,
+                    "status_text": "已通过",
+                    "audit_remark": "表现优秀，同意录取",
+                    "audit_time": "2024-01-16 10:30:00",
+                    "created_at": "2024-01-15 10:30:00",
+                    "updated_at": "2024-01-16 10:30:00",
+                    "user": {
+                      "id": 1,
+                      "account": "2021001",
+                      "username": "张三",
+                      "email": "zhangsan@example.com",
+                      "phone": "13800138000"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "状态变更无效",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "status_unchanged": {
+                    "summary": "状态未变化",
+                    "value": {
+                      "success": false,
+                      "message": "状态未发生变化"
+                    }
+                  },
+                  "cannot_revert": {
+                    "summary": "已录取不能退回",
+                    "value": {
+                      "success": false,
+                      "message": "已录取的报名不能退回待审核状态"
+                    }
+                  },
+                  "already_cancelled": {
+                    "summary": "已取消无法审核",
+                    "value": {
+                      "success": false,
+                      "message": "已取消的报名无法审核"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/applications/export": {
+      "get": {
+        "tags": ["Application"],
+        "summary": "导出报名数据",
+        "description": "导出指定状态的报名数据为Excel文件",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "导出状态筛选（1=待审核, 2=已通过, 3=已取消, 4=已拒绝），默认为2",
+            "schema": {
+              "type": "integer",
+              "enum": [1, 2, 3, 4],
+              "default": 2
+            },
+            "example": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Excel文件下载",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "导出失败",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "message": "导出数据不能为空"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": ["User"],
+        "summary": "获取用户列表",
+        "description": "分页、搜索、筛选用户数据",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "搜索关键词（账号/姓名/邮箱）",
+            "schema": {
+              "type": "string"
+            },
+            "example": "张三"
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "description": "角色筛选（1=学生, 2=管理员）",
+            "schema": {
+              "type": "integer",
+              "enum": [1, 2]
+            },
+            "example": 1
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "激活状态筛选",
+            "schema": {
+              "type": "integer",
+              "enum": [0, 1]
+            },
+            "example": 1
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "type": "integer",
+              "default": 15
+            },
+            "example": 15
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取用户列表",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "current_page": 1,
+                    "data": [
+                      {
+                        "id": 1,
+                        "account": "2021001",
+                        "username": "张三",
+                        "email": "zhangsan@example.com",
+                        "phone": "13800138000",
+                        "role": 1,
+                        "is_active": 1,
+                        "created_at": "2024-01-10T08:00:00.000000Z",
+                        "updated_at": "2024-01-10T08:00:00.000000Z"
+                      },
+                      {
+                        "id": 2,
+                        "account": "2021002",
+                        "username": "李四",
+                        "email": "lisi@example.com",
+                        "phone": "13900139000",
+                        "role": 1,
+                        "is_active": 1,
+                        "created_at": "2024-01-11T09:30:00.000000Z",
+                        "updated_at": "2024-01-11T09:30:00.000000Z"
+                      }
+                    ],
+                    "first_page_url": "http://localhost:8000/api/admin/users?page=1",
+                    "from": 1,
+                    "last_page": 1,
+                    "last_page_url": "http://localhost:8000/api/admin/users?page=1",
+                    "next_page_url": null,
+                    "path": "http://localhost:8000/api/admin/users",
+                    "per_page": 15,
+                    "prev_page_url": null,
+                    "to": 2,
+                    "total": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{id}": {
+      "delete": {
+        "tags": ["User"],
+        "summary": "删除用户",
+        "description": "删除指定用户（有报名记录的用户无法删除）",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "用户ID",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "用户已删除"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "删除失败",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "cannot_delete_self": {
+                    "summary": "不能删除自己",
+                    "value": {
+                      "success": false,
+                      "message": "不能删除自己的账号"
+                    }
+                  },
+                  "has_applications": {
+                    "summary": "有报名记录",
+                    "value": {
+                      "success": false,
+                      "message": "该用户有报名记录，无法删除"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{id}/reset-password": {
+      "post": {
+        "tags": ["User"],
+        "summary": "重置密码",
+        "description": "重置指定用户的密码",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "用户ID",
+            "schema": {
+              "type": "integer"
+            },
+            "example": 2
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["new_password"],
+                "properties": {
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "description": "新密码"
+                  }
+                }
+              },
+              "example": {
+                "new_password": "123456"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "重置成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "密码已重置"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/import": {
+      "post": {
+        "tags": ["User"],
+        "summary": "Excel批量导入学生",
+        "description": "通过Excel文件批量导入学生数据，Excel表头需包含：account(账号)、username(姓名)、email(邮箱)、phone(手机号)、password(密码，可选)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Excel文件(xlsx/xls/csv)，最大10MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "导入完成",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "导入完成",
+                  "data": {
+                    "success_count": 2,
+                    "fail_count": 0,
+                    "errors": []
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "部分导入失败",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "导入完成",
+                  "data": {
+                    "success_count": 1,
+                    "fail_count": 1,
+                    "errors": [
+                      {
+                        "row": 3,
+                        "error": "The email has already been taken."
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "导入失败",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "message": "导入失败：文件格式错误"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/template": {
+      "get": {
+        "tags": ["User"],
+        "summary": "下载导入模板",
+        "description": "下载学生导入Excel模板文件",
+        "responses": {
+          "200": {
+            "description": "Excel模板文件下载",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/system/application-toggle": {
+      "put": {
+        "tags": ["System"],
+        "summary": "设置报名开关",
+        "description": "开启或关闭报名功能",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["is_open"],
+                "properties": {
+                  "is_open": {
+                    "type": "boolean",
+                    "description": "是否开启报名"
+                  }
+                }
+              },
+              "examples": {
+                "open": {
+                  "summary": "开启报名",
+                  "value": {
+                    "is_open": true
+                  }
+                },
+                "close": {
+                  "summary": "关闭报名",
+                  "value": {
+                    "is_open": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "设置成功",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "opened": {
+                    "summary": "报名已开启",
+                    "value": {
+                      "success": true,
+                      "message": "报名已开启",
+                      "data": {
+                        "is_open": true
+                      }
+                    }
+                  },
+                  "closed": {
+                    "summary": "报名已关闭",
+                    "value": {
+                      "success": true,
+                      "message": "报名已关闭",
+                      "data": {
+                        "is_open": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/system/status": {
+      "get": {
+        "tags": ["System"],
+        "summary": "获取系统状态",
+        "description": "获取系统运行状态和统计数据",
+        "responses": {
+          "200": {
+            "description": "成功获取系统状态",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "application_is_open": true,
+                    "total_users": 156,
+                    "total_applications": 89,
+                    "pending_applications": 12
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT认证，格式：Bearer {token}"
+      }
+    }
+  }
+}

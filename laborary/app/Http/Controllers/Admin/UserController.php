@@ -8,7 +8,6 @@ use App\Services\ExcelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -19,15 +18,10 @@ class UserController extends Controller
         $this->excelService = $excelService;
     }
 
-    /**
-     * 9. 获取用户列表
-     * GET /api/admin/users
-     */
     public function index(Request $request)
     {
         $query = LabUser::query();
 
-        // 搜索
         if ($keyword = $request->input('keyword')) {
             $query->where(function($q) use ($keyword) {
                 $q->where('username', 'like', "%{$keyword}%")
@@ -36,12 +30,10 @@ class UserController extends Controller
             });
         }
 
-        // 筛选角色
         if ($role = $request->input('role')) {
             $query->where('role', $role);
         }
 
-        // 筛选激活状态
         if ($isActive = $request->input('is_active')) {
             $query->where('is_active', $isActive);
         }
@@ -54,15 +46,10 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * 10. 删除用户
-     * DELETE /api/admin/users/{id}
-     */
     public function destroy($id)
     {
         $user = LabUser::findOrFail($id);
 
-        // 防止删除管理员自己
         if ($user->id === request()->user()->id) {
             return response()->json([
                 'success' => false,
@@ -86,10 +73,6 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * 重置密码
-     * POST /api/admin/users/{id}/reset-password
-     */
     public function resetPassword(Request $request, $id)
     {
         $request->validate([
@@ -108,21 +91,23 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * 8. Excel 批量导入学生
-     * POST /api/admin/users/import
-     */
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240' // 最大 10MB
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240'
         ]);
 
         $file = $request->file('file');
 
         try {
-            // 解析 Excel 文件
             $data = $this->excelService->import($file);
+
+            if (empty($data)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Excel文件为空或格式不正确'
+                ], 422);
+            }
 
             $successCount = 0;
             $failCount = 0;
@@ -132,7 +117,6 @@ class UserController extends Controller
 
             foreach ($data as $index => $row) {
                 try {
-                    // 验证数据
                     $validated = validator($row, [
                         'account' => 'required|string|unique:lab_users,account',
                         'username' => 'required|string',
@@ -156,7 +140,8 @@ class UserController extends Controller
                 } catch (\Exception $e) {
                     $failCount++;
                     $errors[] = [
-                        'row' => $index + 2, // Excel 行号（从第2行开始）
+                        'row' => $index + 2,
+                        'data' => $row,
                         'error' => $e->getMessage()
                     ];
                 }
@@ -181,5 +166,30 @@ class UserController extends Controller
                 'message' => '导入失败：' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function template()
+    {
+        $data = [
+            [
+                'account' => '2021001',
+                'username' => '张三',
+                'email' => 'zhangsan@example.com',
+                'phone' => '13800138000',
+                'password' => '123456'
+            ],
+            [
+                'account' => '2021002',
+                'username' => '李四',
+                'email' => 'lisi@example.com',
+                'phone' => '13900139000',
+                'password' => ''
+            ]
+        ];
+
+        $filename = $this->excelService->export($data, '学生导入模板_' . date('Ymd'));
+
+        return response()->download(storage_path('app/' . $filename))
+            ->deleteFileAfterSend(true);
     }
 }

@@ -12,7 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-
+        $middleware->alias([
+            'admin.role' => \App\Http\Middleware\AdminRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // 自定义未认证异常响应

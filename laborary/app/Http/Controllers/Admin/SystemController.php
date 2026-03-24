@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\LabUser;
+use App\Models\ApplicationForm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -43,9 +45,9 @@ class SystemController extends Controller
             'success' => true,
             'data' => [
                 'application_is_open' => Cache::get('application_is_open', true),
-                'total_users' => \App\Models\User::count(),
-                'total_applications' => \App\Models\Application::count(),
-                'pending_applications' => \App\Models\Application::where('status', 'pending')->count()
+                'total_users' => LabUser::count(),
+                'total_applications' => ApplicationForm::count(),
+                'pending_applications' => ApplicationForm::where('status', ApplicationForm::STATUS_PENDING)->count()
             ]
         ]);
     }
