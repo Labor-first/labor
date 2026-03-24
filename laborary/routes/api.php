@@ -26,25 +26,25 @@ Route::prefix('lab')->group(function () {
     // [读取] 获取实验室的全局配置信息
     Route::get('/config', [LxController::class, 'getLabConfig']);
 
-    // [写入] 保存/更新实验室配置 (⚠️注意：目前公开，任何人可改，建议移至受保护组)
+    // [写入] 保存/更新实验室配置 
     Route::post('/config', [LxController::class, 'saveLabConfig']);
 
-    // [删除] 删除实验室配置 (⚠️注意：目前公开，建议移至受保护组)
+    // [删除] 删除实验室配置 
     Route::delete('/config', [LxController::class, 'deleteLabConfig']);
 });
 
 // --- 部门管理模块 (公开) ---
 Route::prefix('departments')->group(function () {
-    // [读取] 获取所有部门列表
+    // 获取所有部门列表
     Route::get('/', [LxController::class, 'getDepartments']);
-    // [读取] 获取指定 ID 的部门详细信息
+    // 获取指定 ID 的部门详细信息
     Route::get('/{id}', [LxController::class, 'getDepartmentDetail']);
 
-    // [创建] 新增一个部门 (⚠️注意：目前公开，建议移至受保护组)
+    //新增一个部门
     Route::post('/', [LxController::class, 'createDepartment']);
-    // [更新] 修改指定 ID 的部门信息 (⚠️注意：目前公开，建议移至受保护组)
+    // 修改指定 ID 的部门信息 
     Route::put('/{id}', [LxController::class, 'updateDepartment']);
-    // [删除] 删除指定 ID 的部门 (⚠️注意：目前公开，建议移至受保护组)
+    // 删除指定 ID 的部门 
     Route::delete('/{id}', [LxController::class, 'deleteDepartment']);
 });
 
@@ -55,11 +55,11 @@ Route::prefix('lab-news')->group(function () {
     // [读取] 获取指定 ID 的新闻详细内容
     Route::get('/{id}', [LxController::class, 'getNewsDetail']);
 
-    // [创建] 发布新新闻 (⚠️注意：目前公开，建议移至受保护组)
+    // 发布新新闻 
     Route::post('/', [LxController::class, 'createNews']);
-    // [更新] 编辑指定 ID 的新闻 (⚠️注意：目前公开，建议移至受保护组)
+    // 编辑指定 ID 的新闻 
     Route::put('/{id}', [LxController::class, 'updateNews']);
-    // [删除] 删除指定 ID 的新闻 (⚠️注意：目前公开，建议移至受保护组)
+    // 删除指定 ID 的新闻 
     Route::delete('/{id}', [LxController::class, 'deleteNews']);
 });
 
