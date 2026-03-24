@@ -5,12 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class LabNews extends Model
 {
     use HasFactory;
 
     protected $table = 'lab_news';
+
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return Carbon::instance($date)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s');
+    }
 
     protected $fillable = [
         'title',//新闻标题
