@@ -133,7 +133,7 @@ class FmyController extends Controller
         $data = $request->validated();
 
         //验证旧密码
-        if (!Hash::check($data['old_password'], $user->password)) {
+        if (!Hash::check($data['old_password'], $user->password_hash)) {
             return response()->json([
                 'code' => 400,
                 'message' => '旧密码错误',
@@ -142,7 +142,7 @@ class FmyController extends Controller
         }
 
         //更新密码
-        $user->password = Hash::make($data['new_password']);
+        $user->password_hash = Hash::make($data['new_password']);
         $user->save();
 
         // Sanctum 不需要重新颁发 Token (除非你想让旧 Token 失效，那需要额外逻辑)
