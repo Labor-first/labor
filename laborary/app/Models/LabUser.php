@@ -15,6 +15,8 @@ class LabUser extends Authenticatable implements JWTSubject
 {
     use HasFactory, HasApiTokens, Notifiable;
 
+
+
     protected function serializeDate(\DateTimeInterface $date): string
     {
         return Carbon::instance($date)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s');
