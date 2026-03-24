@@ -289,6 +289,23 @@ class LxController extends Controller
      */
     public function getNewsList(Request $request)
     {
+        // 验证查询参数
+        $validator = Validator::make($request->all(), [
+            'title' => 'nullable|string|max:255',
+            'is_top' => 'nullable|integer|in:0,1',
+            'author_id' => 'nullable|integer|exists:lab_users,id',
+            'page' => 'nullable|integer|min:1',
+            'size' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '搜索字段错误：' . $validator->errors()->first(),
+                'data' => $validator->errors()
+            ], 400);
+        }
+
         $query = LabNews::with('author');
 
         // 可按标题搜索
