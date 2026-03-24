@@ -55,9 +55,9 @@ class LabUser extends Authenticatable
     public function isActivationCodeValid(string $code):bool
     {
         //条件：激活码匹配+未过期+账号未激活
-        return $this->actiation_code === $code
+        return $this->activation_code === $code
             && !is_null($this->activation_expire)
-            && $this->activation_expire->isFuture()
+            && \Illuminate\Support\Carbon::parse($this->activation_expire)->isFuture()
             && $this->is_active == 0;
     }
 
@@ -84,7 +84,7 @@ class LabUser extends Authenticatable
 
     public function news(): HasMany
     {
-        return $this->hasMany(\app\Models\LabNews::class, 'author_id');
+        return $this->hasMany(\App\Models\LabNews::class, 'author_id');
     }
     // 用户的报名记录【一对一！只能有一个！】
     public function applicationForm(): \Illuminate\Database\Eloquent\Relations\HasOne
