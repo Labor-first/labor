@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
         ]);
         LabUser::create([
             'account' => 'wangjiachang',
-            'username' => '李鑫',
+            'username' => '王佳畅',
             'phone' => '18400000000',
             'email' => 'wjc20070117@qq.com',
             'password_hash' => Hash::make('123456'),
