@@ -18,7 +18,7 @@ use App\Http\Controllers\Admin\SystemController;
 
 // [测试] 检查 API 服务是否正常运行，返回当前时间
 Route::get('/test', function () {
-    return response()->json(['msg' => 'API 正常工作', 'time' => now()->setTimezone('Asia/Shanghai')]);
+    return response()->json(['msg' => 'API 正常工作', 'time' => now()]);
 });
 
 // --- 实验室配置模块 (公开) ---
