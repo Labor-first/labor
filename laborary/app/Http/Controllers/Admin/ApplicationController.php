@@ -8,6 +8,7 @@ use App\Models\LabUser;
 use App\Services\ExcelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ApplicationController extends Controller
 {
@@ -52,14 +53,19 @@ class ApplicationController extends Controller
     public function audit(Request $request, $id)
     {
         $request->validate([
-            'status' => ['required', Rule::in([1, 2, 3, 4])],
+            'status' => ['required', Rule::in([
+                ApplicationForm::STATUS_PENDING,
+                ApplicationForm::STATUS_APPROVED,
+                ApplicationForm::STATUS_CANCELLED,
+                ApplicationForm::STATUS_REJECTED
+            ])],
             'audit_remark' => 'nullable|string|max:500'
         ]);
 
         $application = ApplicationForm::findOrFail($id);
 
         // 状态变更验证
-        if ($application->status === 2 && $request->status === 1) {
+        if ($application->status === ApplicationForm::STATUS_APPROVED && $request->status === ApplicationForm::STATUS_PENDING) {
             return response()->json([
                 'success' => false,
                 'message' => '已录取的报名不能退回待审核状态'
@@ -126,24 +132,31 @@ class ApplicationController extends Controller
 
     public function export(Request $request)
     {
-        $status = $request->input('status', 2); // 默认导出通过的
+        $status = $request->input('status', ApplicationForm::STATUS_APPROVED); // 默认导出通过的
 
         $applications = ApplicationForm::with('user')
             ->where('status', $status)
             ->get();
 
+        if ($applications->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => '没有找到符合条件的报名数据'
+            ], 404);
+        }
+
         $data = $applications->map(function($app) {
             return [
-                '账号' => $app->user->account,
-                '用户名' => $app->user->username,
-                '手机号' => $app->user->phone,
-                '邮箱' => $app->user->email,
+                '账号' => $app->user?->account ?? '',
+                '用户名' => $app->user?->username ?? '',
+                '手机号' => $app->user?->phone ?? '',
+                '邮箱' => $app->user?->email ?? '',
                 '姓名' => $app->name,
                 '班级' => $app->class,
                 '学院' => $app->academy,
                 '专业' => $app->major,
                 '状态' => $this->getStatusText($app->status),
-                '审核意见' => $app->audit_remark,
+                '审核意见' => $app->audit_remark ?? '',
                 '报名时间' => $app->created_at->format('Y-m-d H:i:s')
             ];
         })->toArray();
@@ -157,10 +170,10 @@ class ApplicationController extends Controller
     private function getStatusText($status)
     {
         $map = [
-            1 => '待审核',
-            2 => '已通过',
-            3 => '已取消',
-            4 => '已拒绝'
+            ApplicationForm::STATUS_PENDING => '待审核',
+            ApplicationForm::STATUS_APPROVED => '已通过',
+            ApplicationForm::STATUS_CANCELLED => '已取消',
+            ApplicationForm::STATUS_REJECTED => '已拒绝'
         ];
         return $map[$status] ?? '未知';
     }
