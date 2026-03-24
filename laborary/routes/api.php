@@ -121,7 +121,7 @@ Route::middleware('auth:api')->group(function () {
    3. 管理后台路由组 (Admin Routes)
    必须同时满足：1. 已登录 (auth:sanctum)  2. 具有管理员角色 (admin.role)
    ========================================================================== */
-Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function () {
+Route::middleware(['auth:api'])->prefix('admin')->group(function () {
     // --- 报名管理 (管理员专用) ---
     // [读取] 获取所有报名记录列表（支持筛选/搜索）
     Route::get('/applications', [ApplicationController::class, 'index']);
@@ -144,6 +144,9 @@ Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function (
 
     // [导入] 批量导入用户数据（从 Excel 等文件）
     Route::post('/users/import', [UserController::class, 'import']);
+
+    // [模板] 下载用户导入模板
+    Route::get('/users/template', [UserController::class, 'template']);
 
     // --- 系统设置 (管理员专用) ---
     // [开关] 控制报名通道的开启或关闭

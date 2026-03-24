@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 
-class LabUser extends Authenticatable
+use Tymon\JWTAuth\Contracts\JWTSubject;
+
+class LabUser extends Authenticatable  implements JWTSubject
 {
     use HasFactory, HasApiTokens, Notifiable;
     protected $table = 'lab_users';
@@ -49,7 +51,7 @@ class LabUser extends Authenticatable
     public function isActivationCodeValid(string $code):bool
     {
         //条件：激活码匹配+未过期+账号未激活
-        return $this->actiation_code === $code
+        return $this->activation_code === $code
             && !is_null($this->activation_expire)
             && $this->activation_expire->isFuture()
             && $this->is_active == 0;
@@ -85,4 +87,21 @@ class LabUser extends Authenticatable
     {
         return $this->hasOne(ApplicationForm::class, 'user_id');
     }
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey(); // 或者 $this->id
+    }
+
+
+    public function getJWTCustomClaims()
+    {
+        return [
+            // 'role' => $this->role,
+            // 'email' => $this->email,
+            // 注意：不要在这里放敏感信息如密码，Token 是公开可见的（虽然签名了）
+        ];
+    }
+
+
 }

@@ -20,26 +20,28 @@ class ExcelService
         $worksheet = $spreadsheet->getActiveSheet();
         $data = [];
 
-        // 从第2行开始读取（第1行是表头）
+        $headerRow = $worksheet->getRowIterator(1)->current();
+        $headers = [];
+        foreach ($headerRow->getCellIterator() as $cell) {
+            $headers[] = trim($cell->getValue() ?? '');
+        }
+
         foreach ($worksheet->getRowIterator(2) as $row) {
             $cellIterator = $row->getCellIterator();
             $cellIterator->setIterateOnlyExistingCells(false);
 
-            $rowData = [];
             $cells = [];
             foreach ($cellIterator as $cell) {
                 $cells[] = $cell->getValue();
             }
 
-            // 根据实际 Excel 列顺序映射
             if (!empty($cells[0])) {
-                $rowData = [
-                    'student_id' => $cells[0],
-                    'name' => $cells[1],
-                    'email' => $cells[2],
-                    'phone' => $cells[3] ?? null,
-                    'password' => $cells[4] ?? null
-                ];
+                $rowData = [];
+                foreach ($headers as $index => $header) {
+                    if (!empty($header)) {
+                        $rowData[$header] = $cells[$index] ?? null;
+                    }
+                }
                 $data[] = $rowData;
             }
         }
@@ -52,24 +54,30 @@ class ExcelService
      */
     public function export(array $data, string $filename): string
     {
+        if (empty($data)) {
+            throw new \Exception('导出数据不能为空');
+        }
+
         $spreadsheet = new Spreadsheet();
         $worksheet = $spreadsheet->getActiveSheet();
 
-        // 设置表头
-        $headers = array_keys($data[0] ?? []);
+        $headers = array_keys($data[0]);
         $worksheet->fromArray([$headers], null, 'A1');
 
-        // 设置数据
         $worksheet->fromArray($data, null, 'A2');
 
-        // 自动调整列宽
-        foreach (range('A', $headers[count($headers) - 1]) as $col) {
+        $lastColumn = chr(ord('A') + count($headers) - 1);
+        foreach (range('A', $lastColumn) as $col) {
             $worksheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // 保存文件
         $filename .= '.xlsx';
         $path = 'exports/' . $filename;
+        $fullPath = storage_path('app/exports');
+        
+        if (!file_exists($fullPath)) {
+            mkdir($fullPath, 0755, true);
+        }
         
         $writer = new Xlsx($spreadsheet);
         $writer->save(storage_path('app/' . $path));
