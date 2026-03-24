@@ -91,4 +91,20 @@ class LabUser extends Authenticatable
     {
         return $this->hasOne(ApplicationForm::class, 'user_id');
     }
+
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     */
+    public function getJWTIdentifier(): mixed
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     */
+    public function getJWTCustomClaims(): array
+    {
+        return [];
+    }
 }
