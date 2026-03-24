@@ -215,11 +215,22 @@ class LxController extends Controller
             ], 400);
         }
 
-        $department->update($validator->validated());
+        $validatedData = $validator->validated();
+
+        // 检查是否有传入任何更新内容
+        if (empty($validatedData)) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '未传入任何更新内容',
+                'data' => null
+            ], 400);
+        }
+
+        $department->update($validatedData);
 
         return response()->json([
             'code' => 200,
-            'msg' => '创建成功',
+            'msg' => '更新成功',
             'data' => [
                 '部门名称' => $department->name,
                 '简介' => $department->intro,
@@ -425,7 +436,18 @@ class LxController extends Controller
             ], 400);
         }
 
-        $news->update($validator->validated());
+        $validatedData = $validator->validated();
+
+        // 检查是否有传入任何更新内容
+        if (empty($validatedData)) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '未传入任何更新内容',
+                'data' => null
+            ], 400);
+        }
+
+        $news->update($validatedData);
 
         return response()->json([
             'code' => 200,
