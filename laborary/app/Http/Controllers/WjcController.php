@@ -49,78 +49,90 @@ class WjcController extends Controller
     }
 
     public function sendActivationCode(\Illuminate\Http\Request $request): JsonResponse
-    {
-        //参数验证
-        $validator = Validator::make($request->all(),[
-            'account' => 'required|string',
+{
+    // 参数验证
+    $validator = Validator::make($request->all(),[
+        'account' => 'required|string',
+    ]);
+    
+    if($validator->fails()){
+        return response()->json([
+            'code' => 400,
+            'msg' => '参数错误：'.$validator->errors()->first(),
+            'data' => null
         ]);
-        
-        if($validator->fails()){
-            return response()->json([
-                'code' => 400,
-                'msg' => '参数错误：'.$validator->errors()->first(),
-                'data' => null
-            ]);
-        }
+    }
 
-        $account = $request->input('account');
-        $user = LabUser::where('account', $account)->first();
-        
-        if (!$user) {
-            return response()->json([
-                'code' => 404,
-                'msg' => '账号不存在',
-                'data' => null
-            ]);
-        }
-        
-        if ($user->is_active) {
-            return response()->json([
-                'code' => 403,
-                'msg' => '账号已激活，无法重新发送',
-                'data' => null
-            ]);
-        }
+    $account = $request->input('account');
+    $user = LabUser::where('account', $account)->first();
+    
+    if (!$user) {
+        return response()->json([
+            'code' => 404,
+            'msg' => '账号不存在',
+            'data' => null
+        ]);
+    }
+    
+    if ($user->is_active) {
+        return response()->json([
+            'code' => 403,
+            'msg' => '账号已激活，无法重新发送',
+            'data' => null
+        ]);
+    }
 
-        //频率限制
-        if($user->activation_expire && $user->activation_expire->isAfter(now()->subMinute(1))){
-            return response()->json([
-                'code' => 429,
-                'msg' => '请勿频繁获取激活码，1分钟后重试',
-                'data' => null
-            ]);
-        }
-        
-        $activationCode = mt_rand(100000, 999999);
-        $expireTime = now()->addMinutes(30);
+    // 频率限制：先判断过期时间不为null，再判断时间范围（修复空对象调用问题）
+    if($user->activation_expire && $user->activation_expire->isAfter(now()->subMinute(1))){
+        return response()->json([
+            'code' => 429,
+            'msg' => '请勿频繁获取激活码，1分钟后重试',
+            'data' => null
+        ]);
+    }
+    
+    // 生成6位数字激活码（mt_rand 兼容所有Laravel版本）
+    $activationCode = mt_rand(100000, 999999);
+    $expireMinutes = 30; // 明确定义有效期，方便维护
+    $expireTime = now()->addMinutes($expireMinutes);
 
-        //保存激活码到数据库
+    // 保存激活码到数据库（加try-catch提升健壮性）
+    try {
         $user->activation_code = $activationCode;
         $user->activation_expire = $expireTime;
         $user->save();
-
-        //发送激活码邮件
-        try{
-            Mail::to($user->email)->send(new SendActivationCodeMail($user->username, $activationCode));
-            Log::info('激活码邮件发送成功',['account' => $account,'email' => $user->email]);
-        }catch (\Exception $e){
-            Log::error('激活码邮件发送失败',['account' => $account,'email' => $user->email,'error' => $e->getMessage()]);
-            return response()->json([
-                'code' => 500,
-                'msg' => '激活码邮件发送失败',
-                'data' => null
-            ]);
-        }
-        
+    } catch (\Exception $e) {
+        Log::error('激活码保存失败', ['account' => $account, 'error' => $e->getMessage()]);
         return response()->json([
-            'code' => 200,
-            'msg' => '激活码发送成功,30分钟内有效',
-            'data' => [
-                'email' => $user->email,
-                'activation_code' => env('APP_ENV') === 'dev' ? $activationCode : null
-            ]
+            'code' => 500,
+            'msg' => '激活码保存失败，请重试',
+            'data' => null
         ]);
     }
+
+    // 发送激活码邮件
+    try{
+        // 修正：1. 传account而非username 2. 补充有效期参数expireMinutes
+        Mail::to($user->email)->send(new SendActivationCodeMail($user->account, $activationCode, $expireMinutes));
+        Log::info('激活码邮件发送成功',['account' => $account,'email' => $user->email]);
+    }catch (\Exception $e){
+        Log::error('激活码邮件发送失败',['account' => $account,'email' => $user->email,'error' => $e->getMessage()]);
+        return response()->json([
+            'code' => 500,
+            'msg' => '激活码邮件发送失败',
+            'data' => null
+        ]);
+    }
+    
+    return response()->json([
+        'code' => 200,
+        'msg' => '激活码发送成功,30分钟内有效',
+        'data' => [
+            'email' => $user->email,
+            'activation_code' => env('APP_ENV') === 'dev' ? $activationCode : null
+        ]
+    ]);
+}
 
     public function logout(): JsonResponse
     {
