@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\LabUser;
 use App\Services\ExcelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -25,13 +25,13 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::query();
+        $query = LabUser::query();
 
         // 搜索
         if ($keyword = $request->input('keyword')) {
             $query->where(function($q) use ($keyword) {
-                $q->where('name', 'like', "%{$keyword}%")
-                  ->orWhere('student_id', 'like', "%{$keyword}%")
+                $q->where('username', 'like', "%{$keyword}%")
+                  ->orWhere('account', 'like', "%{$keyword}%")
                   ->orWhere('email', 'like', "%{$keyword}%");
             });
         }
@@ -60,7 +60,7 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
+        $user = LabUser::findOrFail($id);
 
         // 防止删除管理员自己
         if ($user->id === request()->user()->id) {
@@ -71,7 +71,7 @@ class UserController extends Controller
         }
 
         // 检查是否有报名记录
-        if ($user->applications()->count() > 0) {
+        if ($user->applicationForm()->exists()) {
             return response()->json([
                 'success' => false,
                 'message' => '该用户有报名记录，无法删除'
@@ -96,10 +96,10 @@ class UserController extends Controller
             'new_password' => 'required|min:6'
         ]);
 
-        $user = User::findOrFail($id);
+        $user = LabUser::findOrFail($id);
 
         $user->update([
-            'password' => Hash::make($request->new_password)
+            'password_hash' => Hash::make($request->new_password)
         ]);
 
         return response()->json([
@@ -134,20 +134,20 @@ class UserController extends Controller
                 try {
                     // 验证数据
                     $validated = validator($row, [
-                        'student_id' => 'required|string|unique:users,student_id',
-                        'name' => 'required|string',
-                        'email' => 'required|email|unique:users,email',
+                        'account' => 'required|string|unique:lab_users,account',
+                        'username' => 'required|string',
+                        'email' => 'required|email|unique:lab_users,email',
                         'phone' => 'nullable|string',
                         'password' => 'nullable|min:6'
                     ])->validate();
 
                     // 创建用户（默认密码为学号后6位或123456）
-                    User::create([
-                        'student_id' => $validated['student_id'],
-                        'name' => $validated['name'],
+                    LabUser::create([
+                        'account' => $validated['account'],
+                        'username' => $validated['username'],
                         'email' => $validated['email'],
                         'phone' => $validated['phone'] ?? null,
-                        'password' => Hash::make($validated['password'] ?? substr($validated['student_id'], -6)),
+                        'password_hash' => Hash::make($validated['password'] ?? substr($validated['account'], -6)),
                         'role' => 1, // 默认学生角色
                         'is_active' => 1
                     ]);
