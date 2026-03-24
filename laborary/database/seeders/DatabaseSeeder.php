@@ -45,7 +45,7 @@ class DatabaseSeeder extends Seeder
             ['account' => 'fumingyue'],
             [
                 'username' => '伏明月',
-                'phone' => '18400000000',
+                'phone' => '18500000000',
                 'email' => '3227605507@qq.com',
                 'password_hash' => Hash::make('123456'),
                 'is_active' => 1,

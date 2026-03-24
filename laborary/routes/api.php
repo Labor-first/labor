@@ -26,10 +26,10 @@ Route::prefix('lab')->group(function () {
     // [读取] 获取实验室的全局配置信息
     Route::get('/config', [LxController::class, 'getLabConfig']);
 
-    // [写入] 保存/更新实验室配置 
+    // [写入] 保存/更新实验室配置
     Route::post('/config', [LxController::class, 'saveLabConfig']);
 
-    // [删除] 删除实验室配置 
+    // [删除] 删除实验室配置
     Route::delete('/config', [LxController::class, 'deleteLabConfig']);
 });
 
@@ -42,9 +42,9 @@ Route::prefix('departments')->group(function () {
 
     //新增一个部门
     Route::post('/', [LxController::class, 'createDepartment']);
-    // 修改指定 ID 的部门信息 
+    // 修改指定 ID 的部门信息
     Route::put('/{id}', [LxController::class, 'updateDepartment']);
-    // 删除指定 ID 的部门 
+    // 删除指定 ID 的部门
     Route::delete('/{id}', [LxController::class, 'deleteDepartment']);
 });
 
@@ -55,11 +55,11 @@ Route::prefix('lab-news')->group(function () {
     // [读取] 获取指定 ID 的新闻详细内容
     Route::get('/{id}', [LxController::class, 'getNewsDetail']);
 
-    // 发布新新闻 
+    // 发布新新闻
     Route::post('/', [LxController::class, 'createNews']);
-    // 编辑指定 ID 的新闻 
+    // 编辑指定 ID 的新闻
     Route::put('/{id}', [LxController::class, 'updateNews']);
-    // 删除指定 ID 的新闻 
+    // 删除指定 ID 的新闻
     Route::delete('/{id}', [LxController::class, 'deleteNews']);
 });
 
@@ -103,18 +103,18 @@ Route::middleware('auth:api')->group(function () {
 
         // [安全] 修改登录密码
         Route::post('/change-password', [FmyController::class, 'changePassword']);
-
-        // --- 报名业务 (需登录) ---
-        // [提交] 提交新的报名表单
-        Route::post('/registration', [FmyController::class, 'registrationStore']);
-
-        // [查询] 查看当前用户的报名状态（需传参 config_id）
-        Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
-
-        // [撤销] 取消/撤回已提交的报名申请
-        Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);
     });
 });
+
+// [提交] 提交新的报名表单
+Route::post('/registration', [FmyController::class, 'registrationStore']);
+
+// [查询] 查看当前用户的报名状态（需传参 config_id）
+Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
+
+// [撤销] 取消/撤回已提交的报名申请
+Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);
+
 
 
 /* ==========================================================================
