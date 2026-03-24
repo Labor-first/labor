@@ -16,7 +16,8 @@ class ExcelService
     public function import(UploadedFile $file): array
     {
         $path = $file->getRealPath();
-        $spreadsheet = IOFactory::load($path);
+        $reader = IOFactory::createReaderForFile($path);
+        $spreadsheet = $reader->load($path);
         $worksheet = $spreadsheet->getActiveSheet();
         $data = [];
 

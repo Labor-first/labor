@@ -8,12 +8,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
-
+use Illuminate\Support\Carbon;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class LabUser extends Authenticatable  implements JWTSubject
+class LabUser extends Authenticatable implements JWTSubject
 {
     use HasFactory, HasApiTokens, Notifiable;
+
+
+
+    protected function serializeDate(\DateTimeInterface $date): string
+    {
+        return Carbon::instance($date)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s');
+    }
+
+
     protected $table = 'lab_users';
 
     protected $fillable = [
@@ -53,7 +62,7 @@ class LabUser extends Authenticatable  implements JWTSubject
         //条件：激活码匹配+未过期+账号未激活
         return $this->activation_code === $code
             && !is_null($this->activation_expire)
-            && $this->activation_expire->isFuture()
+            && \Illuminate\Support\Carbon::parse($this->activation_expire)->isFuture()
             && $this->is_active == 0;
     }
 
@@ -80,7 +89,7 @@ class LabUser extends Authenticatable  implements JWTSubject
 
     public function news(): HasMany
     {
-        return $this->hasMany(\app\Models\LabNews::class, 'author_id');
+        return $this->hasMany(\App\Models\LabNews::class, 'author_id');
     }
     // 用户的报名记录【一对一！只能有一个！】
     public function applicationForm(): \Illuminate\Database\Eloquent\Relations\HasOne
@@ -88,20 +97,19 @@ class LabUser extends Authenticatable  implements JWTSubject
         return $this->hasOne(ApplicationForm::class, 'user_id');
     }
 
-    public function getJWTIdentifier()
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     */
+    public function getJWTIdentifier(): mixed
     {
-        return $this->getKey(); // 或者 $this->id
+        return $this->getKey();
     }
 
-
-    public function getJWTCustomClaims()
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     */
+    public function getJWTCustomClaims(): array
     {
-        return [
-            // 'role' => $this->role,
-            // 'email' => $this->email,
-            // 注意：不要在这里放敏感信息如密码，Token 是公开可见的（虽然签名了）
-        ];
+        return [];
     }
-
-
 }

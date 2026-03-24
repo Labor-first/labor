@@ -215,11 +215,22 @@ class LxController extends Controller
             ], 400);
         }
 
-        $department->update($validator->validated());
+        $validatedData = $validator->validated();
+
+        // 检查是否有传入任何更新内容
+        if (empty($validatedData)) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '未传入任何更新内容',
+                'data' => null
+            ], 400);
+        }
+
+        $department->update($validatedData);
 
         return response()->json([
             'code' => 200,
-            'msg' => '创建成功',
+            'msg' => '更新成功',
             'data' => [
                 '部门名称' => $department->name,
                 '简介' => $department->intro,
@@ -278,6 +289,23 @@ class LxController extends Controller
      */
     public function getNewsList(Request $request)
     {
+        // 验证查询参数
+        $validator = Validator::make($request->all(), [
+            'title' => 'nullable|string|max:255',
+            'is_top' => 'nullable|integer|in:0,1',
+            'author_id' => 'nullable|integer|exists:lab_users,id',
+            'page' => 'nullable|integer|min:1',
+            'size' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '搜索字段错误：' . $validator->errors()->first(),
+                'data' => $validator->errors()
+            ], 400);
+        }
+
         $query = LabNews::with('author');
 
         // 可按标题搜索
@@ -425,7 +453,18 @@ class LxController extends Controller
             ], 400);
         }
 
-        $news->update($validator->validated());
+        $validatedData = $validator->validated();
+
+        // 检查是否有传入任何更新内容
+        if (empty($validatedData)) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '未传入任何更新内容',
+                'data' => null
+            ], 400);
+        }
+
+        $news->update($validatedData);
 
         return response()->json([
             'code' => 200,

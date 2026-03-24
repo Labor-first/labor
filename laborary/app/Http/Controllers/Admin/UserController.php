@@ -57,7 +57,8 @@ class UserController extends Controller
             ], 422);
         }
 
-        if ($user->applicationForm()->count() > 0) {
+        // 检查是否有报名记录
+        if ($user->applicationForm()->exists()) {
             return response()->json([
                 'success' => false,
                 'message' => '该用户有报名记录，无法删除'
@@ -124,13 +125,14 @@ class UserController extends Controller
                         'password' => 'nullable|min:6'
                     ])->validate();
 
+                    // 创建用户（默认密码为学号后6位或123456）
                     LabUser::create([
                         'account' => $validated['account'],
                         'username' => $validated['username'],
                         'email' => $validated['email'],
                         'phone' => $validated['phone'] ?? null,
                         'password_hash' => Hash::make($validated['password'] ?? substr($validated['account'], -6)),
-                        'role' => 1,
+                        'role' => 1, // 默认学生角色
                         'is_active' => 1
                     ]);
 

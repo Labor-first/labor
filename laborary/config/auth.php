@@ -118,4 +118,16 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'guards' => [
+        'web' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
+        
+    'api' => [
+        'driver' => 'jwt',  // 使用 jwt 驱动
+        'provider' => 'users',
+    ],
+],
+
 ];
