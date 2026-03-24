@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace app\Services;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -70,7 +70,7 @@ class ExcelService
         // 保存文件
         $filename .= '.xlsx';
         $path = 'exports/' . $filename;
-        
+
         $writer = new Xlsx($spreadsheet);
         $writer->save(storage_path('app/' . $path));
 
