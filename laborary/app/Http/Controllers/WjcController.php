@@ -29,6 +29,19 @@ class WjcController extends Controller
         
         $user = JWTAuth::user();
         
+        // 检查用户是否已激活
+        if (!$user->is_active) {
+            JWTAuth::invalidate(JWTAuth::getToken());
+            return response()->json([
+                'code' => 403,
+                'msg' => '账号未激活，请先验证激活码',
+                'data' => [
+                    'need_activation' => true,
+                    'account' => $user->account
+                ]
+            ]);
+        }
+        
         $ttl = $remember ? 60 * 24 * 7 : 60 * 24;
         JWTAuth::factory()->setTTL($ttl);
         $token = JWTAuth::claims(['exp' => time() + $ttl * 60])->fromUser($user);
@@ -137,6 +150,14 @@ class WjcController extends Controller
     public function logout(): JsonResponse
     {
         try {
+            $user = auth('api')->user();
+            
+            // 将用户标记为未激活，下次登录需要重新验证激活码
+            if ($user) {
+                $user->is_active = 0;
+                LabUser::where('id', $user->id)->update(['is_active' => 0]);
+            }
+            
             JWTAuth::invalidate(JWTAuth::getToken());
             return response()->json([
                 'code' => 200,

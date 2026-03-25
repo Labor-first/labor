@@ -18,15 +18,18 @@ class UserController extends Controller
         $this->excelService = $excelService;
     }
 
-    public function index(Request $request)
+        public function index(Request $request)
     {
-        $query = LabUser::query();
+        $query = LabUser::with(['department' => function($q) {
+            $q->select('id', 'name');
+        }]);
 
         if ($keyword = $request->input('keyword')) {
             $query->where(function($q) use ($keyword) {
                 $q->where('username', 'like', "%{$keyword}%")
                   ->orWhere('account', 'like', "%{$keyword}%")
-                  ->orWhere('email', 'like', "%{$keyword}%");
+                  ->orWhere('email', 'like', "%{$keyword}%")
+                  ->orWhere('phone', 'like', "%{$keyword}%");
             });
         }
 
@@ -40,9 +43,31 @@ class UserController extends Controller
 
         $query->orderBy('created_at', 'desc');
 
+        $perPage = $request->input('per_page', 15);
+        $paginator = $query->paginate($perPage);
+
+     
+        $users = $paginator->getCollection();
+
+        $formattedData = $users->transform(function($user) {
+            return [
+                'id' => $user->id,
+                'username' => $user->username,
+                'phone' => $user->phone,
+                'email' => $user->email,
+                'account' => $user->account,
+                'department' => $user->department?->name ?? null,
+                'role' => $user->role,
+                'is_active' => $user->is_active,
+                'created_at' => $user->created_at,
+            ];
+        });
+
+      
         return response()->json([
             'success' => true,
-            'data' => $query->paginate($request->input('per_page', 15))
+            'data' => $formattedData->values(), // values() 重置数组索引为 0, 1, 2...
+            
         ]);
     }
 
@@ -118,23 +143,38 @@ class UserController extends Controller
             foreach ($data as $index => $row) {
                 try {
                     $validated = validator($row, [
-                        'account' => 'required|string|unique:lab_users,account',
+                        'account' => 'required|string',
                         'username' => 'required|string',
-                        'email' => 'required|email|unique:lab_users,email',
-                        'phone' => 'nullable|string',
+                        'email' => 'required|email',
+                        'phone' => 'nullable',
                         'password' => 'nullable|min:6'
                     ])->validate();
 
-                    // 创建用户（默认密码为学号后6位或123456）
-                    LabUser::create([
-                        'account' => $validated['account'],
-                        'username' => $validated['username'],
-                        'email' => $validated['email'],
-                        'phone' => $validated['phone'] ?? null,
-                        'password_hash' => Hash::make($validated['password'] ?? substr($validated['account'], -6)),
-                        'role' => 1, // 默认学生角色
-                        'is_active' => 1
-                    ]);
+                    $user = LabUser::where('account', $validated['account'])
+                        ->first();
+                    
+                    if (!$user) {
+                        $user = LabUser::where('email', $validated['email'])->first();
+                    }
+
+                    if ($user) {
+                        $user->update([
+                            'username' => $validated['username'],
+                            'email' => $validated['email'],
+                            'phone' => (string)($validated['phone'] ?? ''),
+                            'password_hash' => Hash::make($validated['password'] ?? substr($validated['account'], -6)),
+                        ]);
+                    } else {
+                        LabUser::create([
+                            'account' => $validated['account'],
+                            'username' => $validated['username'],
+                            'email' => $validated['email'],
+                            'phone' => (string)($validated['phone'] ?? ''),
+                            'password_hash' => Hash::make($validated['password'] ?? substr($validated['account'], -6)),
+                            'role' => 1,
+                            'is_active' => 1
+                        ]);
+                    }
 
                     $successCount++;
                 } catch (\Exception $e) {
