@@ -104,7 +104,7 @@ Route::middleware('auth:api')->group(function () {
 Route::post('/registration', [FmyController::class, 'registrationStore']);
 
 // [查询] 查看当前用户的报名状态（需传参 config_id）
-Route::get('/registration/status', [FmyController::class, 'getRegistrationStatus']);
+Route::get('/registration/status', [FmyController::class, 'CheckRegistrationStatus']);
 
 // [撤销] 取消/撤回已提交的报名申请
 Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);

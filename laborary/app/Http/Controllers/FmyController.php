@@ -162,18 +162,11 @@ class FmyController extends Controller
      */
     public function registrationStore(StoreRegistrationRequest $request): JsonResponse
     {
-        //身份业务验证 (学号 + 姓名)
-        $validation = $this->verifyStudentCredentials();
-        if (!$validation['success']) {
-            return $validation['response'];
-        }
-        $user = $validation['user'];
-
         //获取已验证的数据 (由 StoreRegistrationRequest 保证)
         $data = $request->validated();
 
         try {
-            $registration = DB::transaction(function () use ($user, $data) {
+            $registration = DB::transaction(function () use ($data) {
                 // 锁行防止超卖或并发问题
                 $config = RegistrationConfig::where('id', $data['config_id'])
                     ->lockForUpdate()
@@ -187,7 +180,7 @@ class FmyController extends Controller
                 }
 
                 $exists = ApplicationForm::where('config_id', $data['config_id'])
-                    ->where('user_id', $user->account)
+                    ->where('user_id', $data['user_id'])
                     ->exists();
 
                 if ($exists) {
@@ -202,7 +195,7 @@ class FmyController extends Controller
                     'major'         => $data['major'],
                     'director_name' => $data['director_name'],
                     'sign_reason'   => $data['sign_reason'],
-                    'user_id'       => $user->account,
+                    'user_id'       => $data['user_id'],
                     'status'        => 1,
                 ]);
 
@@ -273,18 +266,12 @@ class FmyController extends Controller
      */
     public function CheckRegistrationStatus(CheckRegistrationStatusRequest $request): JsonResponse
     {
-        //身份业务验证
-        $validation = $this->verifyStudentCredentials();
-        if (!$validation['success']) {
-            return $validation['response'];
-        }
-        $user = $validation['user'];
+        //获取已验证的数据 (由 StoreRegistrationRequest 保证)
+        $registration = $request->validated();
 
-        //获取 config_id (由 FormRequest 验证过)
-        $configId = $request->validated()['config_id'];
 
-        $registration = ApplicationForm::where('config_id', $configId)
-            ->where('user_id', $user->account)
+        $registration = ApplicationForm::where('user_id',$registration['user_id'] )
+            ->where('name', $registration['name'] )
             ->first();
 
         if (!$registration) {
@@ -313,20 +300,13 @@ class FmyController extends Controller
      */
     public function cancelRegistration(CancelRegistrationRequest $request): JsonResponse
     {
-        //身份业务验证
-        $validation = $this->verifyStudentCredentials();
-        if (!$validation['success']) {
-            return $validation['response'];
-        }
-        $user = $validation['user'];
-
-        //获取 config_id
-        $configId = $request->validated()['config_id'];
+        //获取已验证的数据 (由 StoreRegistrationRequest 保证)
+        $data = $request->validated();
 
         try {
-            $cancelled = DB::transaction(function () use ($user, $configId) {
-                $registration = ApplicationForm::where('config_id', $configId)
-                    ->where('user_id', $user->account)
+            $cancelled = DB::transaction(function () use ($data) {
+                $registration = ApplicationForm::where('user_id', $data['user_id'])
+                    ->where('name', $data['name'])
                     ->lockForUpdate()
                     ->first();
 
