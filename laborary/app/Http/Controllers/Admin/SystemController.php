@@ -56,10 +56,10 @@ class SystemController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'application_is_open' => Cache::get('application_is_open', true),
-                'total_users' => LabUser::count(),
-                'total_applications' => ApplicationForm::count(),
-                'pending_applications' => ApplicationForm::where('status', ApplicationForm::STATUS_PENDING)->count()
+                'application_is_open' => Cache::get('application_is_open', true),// 报名开关状态
+                'total_applications' => ApplicationForm::count(),// 总报名数
+                'pending_applications' => ApplicationForm::where('status', ApplicationForm::STATUS_PENDING)->count(),// 待审核报名数
+                'approved_applications' => ApplicationForm::where('status', ApplicationForm::STATUS_APPROVED, true)->count()// 已审核报名数
             ]
         ]);
     }
