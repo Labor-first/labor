@@ -23,6 +23,10 @@
     {
       "name": "System",
       "description": "系统管理接口"
+    },
+    {
+      "name": "ForgotPassword",
+      "description": "忘记密码接口"
     }
   ],
   "paths": {
@@ -732,6 +736,206 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/api/forgot-password/send-code": {
+      "post": {
+        "tags": ["ForgotPassword"],
+        "summary": "发送重置密码验证码",
+        "description": "通过账号和邮箱验证身份，发送6位数字验证码到邮箱",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["account", "email"],
+                "properties": {
+                  "account": {
+                    "type": "string",
+                    "description": "用户账号（学号）"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "用户邮箱"
+                  }
+                }
+              },
+              "examples": {
+                "send_code": {
+                  "summary": "发送验证码示例",
+                  "value": {
+                    "account": "2021001",
+                    "email": "zhangsan@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "验证码发送成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "message": "验证码已发送到您的邮箱，有效期10分钟",
+                  "data": {
+                    "email": "zh***n@example.com"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "账号与邮箱不匹配",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 404,
+                  "message": "账号与邮箱不匹配，或用户不存在",
+                  "data": null
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "验证码发送失败",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 500,
+                  "message": "验证码发送失败，请稍后重试",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/forgot-password/reset": {
+      "post": {
+        "tags": ["ForgotPassword"],
+        "summary": "验证码验证并重置密码",
+        "description": "验证6位数字验证码，验证通过后重置密码",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["account", "email", "code", "new_password", "new_password_confirmation"],
+                "properties": {
+                  "account": {
+                    "type": "string",
+                    "description": "用户账号（学号）"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "用户邮箱"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6,
+                    "description": "6位数字验证码"
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "description": "新密码（至少6位）"
+                  },
+                  "new_password_confirmation": {
+                    "type": "string",
+                    "minLength": 6,
+                    "description": "确认新密码"
+                  }
+                }
+              },
+              "examples": {
+                "reset_password": {
+                  "summary": "重置密码示例",
+                  "value": {
+                    "account": "2021001",
+                    "email": "zhangsan@example.com",
+                    "code": "123456",
+                    "new_password": "newpassword123",
+                    "new_password_confirmation": "newpassword123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "密码重置成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "message": "密码重置成功，请使用新密码登录",
+                  "data": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误或过期",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "code_expired": {
+                    "summary": "验证码过期",
+                    "value": {
+                      "code": 400,
+                      "message": "验证码已过期，请重新获取",
+                      "data": null
+                    }
+                  },
+                  "code_wrong": {
+                    "summary": "验证码错误",
+                    "value": {
+                      "code": 400,
+                      "message": "验证码错误，请重新输入",
+                      "data": {
+                        "remaining_attempts": 4
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 404,
+                  "message": "账号与邮箱不匹配，或用户不存在",
+                  "data": null
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "验证码错误次数过多",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 429,
+                  "message": "验证码错误次数过多，请重新获取",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
       }
     }
   },

@@ -73,6 +73,15 @@ Route::prefix('user')->group(function () {
     Route::post('/verify-activation-code', [WjcController::class, 'verifyActivationCode']);
 });
 
+// --- 忘记密码模块 (无需登录) ---
+Route::prefix('forgot-password')->group(function () {
+    // [发送] 发送重置密码验证码到邮箱
+    Route::post('/send-code', [FmyController::class, 'sendResetCode']);
+    
+    // [重置] 验证验证码并重置密码
+    Route::post('/reset', [FmyController::class, 'resetPassword']);
+});
+
 // --- 兼容旧版路径 (公开) ---
 // 为了兼容前端旧代码，保留不带前缀的直接访问路径
 Route::get('/departments', [LxController::class, 'getDepartments']);             // [读取] 部门列表

@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Log;
 use Exception;
 use Throwable;
 use Illuminate\Support\Facades\Auth; // 用于 Sanctum 认证
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ResetPasswordCode;
 
 class FmyController extends Controller
 {
@@ -154,6 +157,158 @@ class FmyController extends Controller
             'message' => '密码修改成功',
             'data' => null
         ]);
+    }
+
+    /**
+     * 发送重置密码验证码 (免登录)
+     * POST /api/forgot-password/send-code
+     */
+    public function sendResetCode(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $request->validate([
+            'account' => 'required|string',
+            'email' => 'required|email'
+        ]);
+
+        $user = LabUser::where('account', $request->account)
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'code' => 404,
+                'message' => '账号与邮箱不匹配，或用户不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        
+        $cacheKey = "reset_code:{$user->account}";
+        Cache::put($cacheKey, [
+            'code' => $code,
+            'email' => $user->email,
+            'attempts' => 0
+        ], now()->addMinutes(10));
+
+        try {
+            Mail::to($user->email)->send(new ResetPasswordCode($code, $user->username));
+            
+            return response()->json([
+                'code' => 200,
+                'message' => '验证码已发送到您的邮箱，有效期10分钟',
+                'data' => [
+                    'email' => $this->maskEmail($user->email)
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Send Reset Code Error: ' . $e->getMessage());
+            
+            return response()->json([
+                'code' => 500,
+                'message' => '验证码发送失败，请稍后重试',
+                'data' => null
+            ], 500);
+        }
+    }
+
+    /**
+     * 验证验证码并重置密码 (免登录)
+     * POST /api/forgot-password/reset
+     */
+    public function resetPassword(\Illuminate\Http\Request $request): JsonResponse
+    {
+        $request->validate([
+            'account' => 'required|string',
+            'email' => 'required|email',
+            'code' => 'required|string|size:6',
+            'new_password' => 'required|string|min:6|confirmed'
+        ]);
+
+        $user = LabUser::where('account', $request->account)
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'code' => 404,
+                'message' => '账号与邮箱不匹配，或用户不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $cacheKey = "reset_code:{$user->account}";
+        $cachedData = Cache::get($cacheKey);
+
+        if (!$cachedData) {
+            return response()->json([
+                'code' => 400,
+                'message' => '验证码已过期，请重新获取',
+                'data' => null
+            ], 400);
+        }
+
+        if ($cachedData['attempts'] >= 5) {
+            Cache::forget($cacheKey);
+            return response()->json([
+                'code' => 429,
+                'message' => '验证码错误次数过多，请重新获取',
+                'data' => null
+            ], 429);
+        }
+
+        if ($cachedData['code'] !== $request->code) {
+            $cachedData['attempts']++;
+            Cache::put($cacheKey, $cachedData, now()->addMinutes(10));
+            
+            return response()->json([
+                'code' => 400,
+                'message' => '验证码错误，请重新输入',
+                'data' => [
+                    'remaining_attempts' => 5 - $cachedData['attempts']
+                ]
+            ], 400);
+        }
+
+        $user->password_hash = Hash::make($request->new_password);
+        $user->save();
+
+        Cache::forget($cacheKey);
+
+        Log::info('Password Reset Success', [
+            'account' => $user->account,
+            'email' => $user->email,
+            'ip' => $request->ip()
+        ]);
+
+        return response()->json([
+            'code' => 200,
+            'message' => '密码重置成功，请使用新密码登录',
+            'data' => null
+        ]);
+    }
+
+    /**
+     * 邮箱脱敏显示
+     */
+    private function maskEmail(string $email): string
+    {
+        $parts = explode('@', $email);
+        if (count($parts) !== 2) {
+            return $email;
+        }
+        
+        $name = $parts[0];
+        $domain = $parts[1];
+        
+        $nameLength = strlen($name);
+        if ($nameLength <= 2) {
+            $maskedName = $name[0] . '***';
+        } else {
+            $maskedName = substr($name, 0, 2) . '***' . substr($name, -1);
+        }
+        
+        return $maskedName . '@' . $domain;
     }
 
 
