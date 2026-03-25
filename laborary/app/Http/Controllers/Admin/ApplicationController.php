@@ -50,6 +50,54 @@ class ApplicationController extends Controller
         ]);
     }
 
+    public function export(Request $request)
+    {
+        $status = $request->input('status', ApplicationForm::STATUS_APPROVED); // 默认导出通过的
+
+        $applications = ApplicationForm::with('user')
+            ->where('status', $status)
+            ->get();
+
+        if ($applications->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => '没有找到符合条件的报名数据'
+            ], 404);
+        }
+
+        $data = $applications->map(function($app) {
+            return [
+                '账号' => $app->user?->account ?? '',
+                '用户名' => $app->user?->username ?? '',
+                '手机号' => $app->user?->phone ?? '',
+                '邮箱' => $app->user?->email ?? '',
+                '姓名' => $app->name,
+                '班级' => $app->class,
+                '学院' => $app->academy,
+                '专业' => $app->major,
+                '状态' => $this->getStatusText($app->status),
+                '审核意见' => $app->audit_remark ?? '',
+                '报名时间' => $app->created_at->format('Y-m-d H:i:s')
+            ];
+        })->toArray();
+
+        $filename = $this->excelService->export($data, '报名数据_' . date('Ymd'));
+
+        return response()->download(storage_path('app/' . $filename))
+            ->deleteFileAfterSend(true);
+    }
+
+    private function getStatusText($status)
+    {
+        $map = [
+            ApplicationForm::STATUS_PENDING => '待审核',
+            ApplicationForm::STATUS_APPROVED => '已通过',
+            ApplicationForm::STATUS_CANCELLED => '已取消',
+            ApplicationForm::STATUS_REJECTED => '已拒绝'
+        ];
+        return $map[$status] ?? '未知';
+    }
+
     public function audit(Request $request, $id)
     {
         $request->validate([
@@ -128,53 +176,5 @@ class ApplicationController extends Controller
             ApplicationForm::STATUS_REJECTED => '审核拒绝',
         ];
         return $messages[$status] ?? '审核完成';
-    }
-
-    public function export(Request $request)
-    {
-        $status = $request->input('status', ApplicationForm::STATUS_APPROVED); // 默认导出通过的
-
-        $applications = ApplicationForm::with('user')
-            ->where('status', $status)
-            ->get();
-
-        if ($applications->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => '没有找到符合条件的报名数据'
-            ], 404);
-        }
-
-        $data = $applications->map(function($app) {
-            return [
-                '账号' => $app->user?->account ?? '',
-                '用户名' => $app->user?->username ?? '',
-                '手机号' => $app->user?->phone ?? '',
-                '邮箱' => $app->user?->email ?? '',
-                '姓名' => $app->name,
-                '班级' => $app->class,
-                '学院' => $app->academy,
-                '专业' => $app->major,
-                '状态' => $this->getStatusText($app->status),
-                '审核意见' => $app->audit_remark ?? '',
-                '报名时间' => $app->created_at->format('Y-m-d H:i:s')
-            ];
-        })->toArray();
-
-        $filename = $this->excelService->export($data, '报名数据_' . date('Ymd'));
-
-        return response()->download(storage_path('app/' . $filename))
-            ->deleteFileAfterSend(true);
-    }
-
-    private function getStatusText($status)
-    {
-        $map = [
-            ApplicationForm::STATUS_PENDING => '待审核',
-            ApplicationForm::STATUS_APPROVED => '已通过',
-            ApplicationForm::STATUS_CANCELLED => '已取消',
-            ApplicationForm::STATUS_REJECTED => '已拒绝'
-        ];
-        return $map[$status] ?? '未知';
     }
 }
