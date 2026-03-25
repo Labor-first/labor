@@ -18,7 +18,7 @@ class UserController extends Controller
         $this->excelService = $excelService;
     }
 
-    public function index(Request $request)
+        public function index(Request $request)
     {
         $query = LabUser::with(['department' => function($q) {
             $q->select('id', 'name');
@@ -44,9 +44,12 @@ class UserController extends Controller
         $query->orderBy('created_at', 'desc');
 
         $perPage = $request->input('per_page', 15);
-        $users = $query->paginate($perPage);
+        $paginator = $query->paginate($perPage);
 
-        $users->getCollection()->transform(function($user) {
+     
+        $users = $paginator->getCollection();
+
+        $formattedData = $users->transform(function($user) {
             return [
                 'id' => $user->id,
                 'username' => $user->username,
@@ -54,12 +57,17 @@ class UserController extends Controller
                 'email' => $user->email,
                 'account' => $user->account,
                 'department' => $user->department?->name ?? null,
+                'role' => $user->role,
+                'is_active' => $user->is_active,
+                'created_at' => $user->created_at,
             ];
         });
 
+      
         return response()->json([
             'success' => true,
-            'data' => $users
+            'data' => $formattedData->values(), // values() 重置数组索引为 0, 1, 2...
+            
         ]);
     }
 
