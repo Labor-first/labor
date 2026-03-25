@@ -28,8 +28,9 @@ class FmyController extends Controller
      */
     private function verifyStudentCredentials()
     {
+        //request():这是Laravel的全局辅助函数，用于获取当前的HTTP请求实例（Illuminate\Http\Request 对象）
         $request = request();
-        $studentAccount = $request->input('user_id');
+        $studentAccount = $request->input('user_id');//从请求中获取指定键名的值。
         $username = $request->input('name');
 
         // 基础非空检查 (虽然 FormRequest 可能已校验，但为了双重保险保留)
@@ -231,7 +232,7 @@ class FmyController extends Controller
 
         } catch (Exception $e) {
             $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
-            
+
             // 根据错误信息智能判断状态码
             $msg = $e->getMessage();
             $statusCode = match(true) {
@@ -258,7 +259,7 @@ class FmyController extends Controller
             Log::error('Registration System Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'code' => 500,
                 'message' => '系统繁忙，请稍后重试',
@@ -378,7 +379,7 @@ class FmyController extends Controller
 
         } catch (Exception $e) {
             $statusCode = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 400;
-            
+
             $msg = $e->getMessage();
             $statusCode = match(true) {
                 str_contains($msg, '未找到') => 404,
@@ -403,7 +404,7 @@ class FmyController extends Controller
             Log::error('Cancel Registration System Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'code' => 500,
                 'message' => '系统繁忙，撤销失败',
