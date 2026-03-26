@@ -34,6 +34,7 @@ class FormDraft extends Model
     }
 
     protected $fillable = [
+        'device_id',
         'user_id',
         'form_type',
         'config_id',

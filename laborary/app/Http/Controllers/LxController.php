@@ -503,11 +503,12 @@ class LxController extends Controller
 
     /**
      * 保存表单草稿
-     * 支持断点续填功能，保存未完成的表单数据
+     * 支持断点续填功能，保存未完成的表单数据（无需登录，使用device_id标识）
      */
     public function saveDraft(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
             'form_type' => 'required|string|max:50',
             'config_id' => 'nullable|integer|exists:registration_configs,id',
             'form_data' => 'required|array',
@@ -524,21 +525,12 @@ class LxController extends Controller
             ], 400);
         }
 
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json([
-                'code' => 401,
-                'msg' => '未登录，无法保存草稿',
-                'data' => null
-            ], 401);
-        }
-
-        $userId = $user->id;
+        $deviceId = $request->input('device_id');
         $formType = $request->input('form_type');
         $configId = $request->input('config_id');
 
-        // 查找是否已存在该用户的该类型草稿
-        $query = FormDraft::where('user_id', $userId)
+        // 查找是否已存在该设备的该类型草稿
+        $query = FormDraft::where('device_id', $deviceId)
             ->where('form_type', $formType);
         
         if ($configId) {
@@ -549,7 +541,7 @@ class LxController extends Controller
 
         $expiresDays = $request->input('expires_days', 7);
         $data = [
-            'user_id' => $userId,
+            'device_id' => $deviceId,
             'form_type' => $formType,
             'config_id' => $configId,
             'form_data' => $request->input('form_data'),
@@ -659,20 +651,12 @@ class LxController extends Controller
     }
 
     /**
-     * 获取用户的所有草稿列表
+     * 获取设备的所有草稿列表（无需登录，使用device_id标识）
      */
     public function getDraftList(Request $request)
     {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json([
-                'code' => 401,
-                'msg' => '未登录，无法获取草稿列表',
-                'data' => null
-            ], 401);
-        }
-
         $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
             'page' => 'nullable|integer|min:1',
             'size' => 'nullable|integer|min:1|max:100',
         ]);
@@ -685,12 +669,12 @@ class LxController extends Controller
             ], 400);
         }
 
-        $userId = $user->id;
+        $deviceId = $request->input('device_id');
         $page = $request->input('page', 1);
         $size = $request->input('size', 10);
 
         // 只获取未过期的草稿
-        $query = FormDraft::where('user_id', $userId)
+        $query = FormDraft::where('device_id', $deviceId)
             ->where(function ($q) {
                 $q->whereNull('expires_at')
                   ->orWhere('expires_at', '>', now());
@@ -728,21 +712,25 @@ class LxController extends Controller
     }
 
     /**
-     * 删除表单草稿
+     * 删除表单草稿（无需登录，使用device_id标识）
      */
-    public function deleteDraft($id)
+    public function deleteDraft(Request $request, $id)
     {
-        $user = Auth::user();
-        if (!$user) {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
             return response()->json([
-                'code' => 401,
-                'msg' => '未登录，无法删除草稿',
-                'data' => null
-            ], 401);
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
         }
 
+        $deviceId = $request->input('device_id');
         $draft = FormDraft::where('id', $id)
-            ->where('user_id', $user->id)
+            ->where('device_id', $deviceId)
             ->first();
 
         if (!$draft) {
@@ -763,20 +751,24 @@ class LxController extends Controller
     }
 
     /**
-     * 清空用户所有草稿
+     * 清空设备所有草稿（无需登录，使用device_id标识）
      */
-    public function clearAllDrafts()
+    public function clearAllDrafts(Request $request)
     {
-        $user = Auth::user();
-        if (!$user) {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
             return response()->json([
-                'code' => 401,
-                'msg' => '未登录，无法清空草稿',
-                'data' => null
-            ], 401);
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
         }
 
-        $count = FormDraft::where('user_id', $user->id)->delete();
+        $deviceId = $request->input('device_id');
+        $count = FormDraft::where('device_id', $deviceId)->delete();
 
         return response()->json([
             'code' => 200,
