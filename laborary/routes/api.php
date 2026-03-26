@@ -121,6 +121,21 @@ Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']
 
 
 
+// --- 表单草稿模块 (需登录) ---
+// 支持断点续填功能，保存未完成的表单数据
+Route::middleware('auth:api')->prefix('drafts')->group(function () {
+    // [写入] 保存/更新表单草稿
+    Route::post('/', [LxController::class, 'saveDraft']);
+    // [读取] 获取指定类型的草稿
+    Route::get('/', [LxController::class, 'getDraft']);
+    // [读取] 获取用户的所有草稿列表
+    Route::get('/list', [LxController::class, 'getDraftList']);
+    // [删除] 删除指定草稿
+    Route::delete('/{id}', [LxController::class, 'deleteDraft']);
+    // [删除] 清空所有草稿
+    Route::delete('/', [LxController::class, 'clearAllDrafts']);
+});
+
 Route::middleware(['auth:api'])->prefix('admin')->group(function () {
     // --- 报名管理 (管理员专用) ---
     // [读取] 获取所有报名记录列表（支持筛选/搜索）
