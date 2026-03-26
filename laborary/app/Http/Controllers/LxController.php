@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\FormDraft;
 use App\Models\LabConfig;
 use App\Models\LabNews;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class LxController extends Controller
@@ -494,6 +496,359 @@ class LxController extends Controller
             'code' => 200,
             'msg' => '删除成功',
             'data' => null
+        ]);
+    }
+
+    // ==================== 表单草稿管理 ====================
+
+    /**
+     * 保存表单草稿
+     */
+    public function saveDraft(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+            'form_type' => 'required|string|max:50',
+            'config_id' => 'nullable|integer|exists:registration_configs,id',
+            'form_data' => 'required|array',
+            'current_step' => 'nullable|integer|min:1',
+            'total_steps' => 'nullable|integer|min:1',
+            'expires_days' => 'nullable|integer|min:1|max:30',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $deviceId = $request->input('device_id');
+        $formType = $request->input('form_type');
+        $configId = $request->input('config_id');
+
+        // 查找是否已存在该设备的该类型草稿
+        $query = FormDraft::where('device_id', $deviceId)
+            ->where('form_type', $formType);
+        
+        if ($configId) {
+            $query->where('config_id', $configId);
+        }
+
+        $draft = $query->first();
+
+        $expiresDays = $request->input('expires_days', 7);
+        $data = [
+            'device_id' => $deviceId,
+            'form_type' => $formType,
+            'config_id' => $configId,
+            'form_data' => $request->input('form_data'),
+            'current_step' => $request->input('current_step', 1),
+            'total_steps' => $request->input('total_steps', 1),
+            'expires_at' => now()->addDays($expiresDays),
+        ];
+
+        if ($draft) {
+            $draft->update($data);
+            $msg = '草稿更新成功';
+        } else {
+            $draft = FormDraft::create($data);
+            $msg = '草稿保存成功';
+        }
+
+        return response()->json([
+            'code' => 200,
+            'msg' => $msg,
+            'data' => [
+                'draft_id' => $draft->id,
+                'form_type' => $draft->form_type,
+                'current_step' => $draft->current_step,
+                'total_steps' => $draft->total_steps,
+                'progress' => $draft->getProgressPercentage() . '%',
+                'expires_at' => $draft->expires_at,
+                'saved_at' => $draft->updated_at,
+            ]
+        ]);
+    }
+
+    /**
+     * 获取表单草稿
+     * 根据表单类型获取用户的草稿数据
+     */
+    public function getDraft(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+            'form_type' => 'required|string|max:50',
+            'config_id' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $deviceId = $request->input('device_id');
+        $formType = $request->input('form_type');
+        $configId = $request->input('config_id');
+
+        $query = FormDraft::where('device_id', $deviceId)
+            ->where('form_type', $formType);
+
+        if ($configId) {
+            $query->where('config_id', $configId);
+        }
+
+        $draft = $query->first();
+
+        if (!$draft) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '草稿不存在',
+                'data' => null
+            ], 404);
+        }
+
+        // 检查草稿是否过期
+        if ($draft->isExpired()) {
+            $draft->delete();
+            return response()->json([
+                'code' => 410,
+                'msg' => '草稿已过期，请重新填写',
+                'data' => null
+            ], 410);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'msg' => 'success',
+            'data' => [
+                'draft_id' => $draft->id,
+                'form_type' => $draft->form_type,
+                'config_id' => $draft->config_id,
+                'form_data' => $draft->form_data,
+                'current_step' => $draft->current_step,
+                'total_steps' => $draft->total_steps,
+                'progress' => $draft->getProgressPercentage() . '%',
+                'expires_at' => $draft->expires_at,
+                'created_at' => $draft->created_at,
+                'updated_at' => $draft->updated_at,
+            ]
+        ]);
+    }
+
+    /**
+     * 获取设备的所有草稿列表（无需登录，使用device_id标识）
+     */
+    public function getDraftList(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+            'page' => 'nullable|integer|min:1',
+            'size' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $deviceId = $request->input('device_id');
+        $page = $request->input('page', 1);
+        $size = $request->input('size', 10);
+
+        // 只获取未过期的草稿
+        $query = FormDraft::where('device_id', $deviceId)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->orderBy('updated_at', 'desc');
+
+        $list = $query->paginate($size, ['*'], 'page', $page);
+
+        // 格式化数据
+        $formattedList = collect($list->items())->map(function ($draft) {
+            return [
+                'draft_id' => $draft->id,
+                'form_type' => $draft->form_type,
+                'config_id' => $draft->config_id,
+                'current_step' => $draft->current_step,
+                'total_steps' => $draft->total_steps,
+                'progress' => $draft->getProgressPercentage() . '%',
+                'expires_at' => $draft->expires_at,
+                'updated_at' => $draft->updated_at,
+            ];
+        });
+
+        $data = [
+            'list' => $formattedList,
+            'total' => $list->total(),
+            'page' => (int)$page,
+            'size' => (int)$size
+        ];
+
+        return response()->json([
+            'code' => 200,
+            'msg' => 'success',
+            'data' => $data
+        ]);
+    }
+
+    /**
+     * 删除表单草稿（无需登录，使用device_id标识）
+     */
+    public function deleteDraft(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $deviceId = $request->input('device_id');
+        $draft = FormDraft::where('id', $id)
+            ->where('device_id', $deviceId)
+            ->first();
+
+        if (!$draft) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '草稿不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $draft->delete();
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '草稿删除成功',
+            'data' => null
+        ]);
+    }
+
+    /**
+     * 清空设备所有草稿（无需登录，使用device_id标识）
+     */
+    public function clearAllDrafts(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $deviceId = $request->input('device_id');
+        $count = FormDraft::where('device_id', $deviceId)->delete();
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '草稿清空成功',
+            'data' => [
+                'deleted_count' => $count
+            ]
+        ]);
+    }
+
+    /**
+     * 草稿回显接口
+     * 用户再次进入页面时，加载已保存的草稿数据
+     * 支持根据 device_id + form_type + config_id 精准获取最新草稿
+     */
+    public function loadDraft(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+            'form_type' => 'required|string|max:50',
+            'config_id' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $deviceId = $request->input('device_id');
+        $formType = $request->input('form_type');
+        $configId = $request->input('config_id');
+
+        // 构建查询
+        $query = FormDraft::where('device_id', $deviceId)
+            ->where('form_type', $formType);
+
+        if ($configId) {
+            $query->where('config_id', $configId);
+        }
+
+        // 获取最新的草稿（按更新时间倒序）
+        $draft = $query->orderBy('updated_at', 'desc')->first();
+
+        // 没有找到草稿
+        if (!$draft) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '暂无草稿数据',
+                'data' => [
+                    'has_draft' => false,
+                    'form_data' => null,
+                ]
+            ]);
+        }
+
+        // 检查草稿是否过期
+        if ($draft->isExpired()) {
+            $draft->delete();
+            return response()->json([
+                'code' => 410,
+                'msg' => '草稿已过期，请重新填写',
+                'data' => [
+                    'has_draft' => false,
+                    'form_data' => null,
+                    'expired_at' => $draft->expires_at,
+                ]
+            ], 410);
+        }
+
+        // 返回草稿数据，用于回显
+        return response()->json([
+            'code' => 200,
+            'msg' => '草稿加载成功',
+            'data' => [
+                'has_draft' => true,
+                'draft_id' => $draft->id,
+                'form_type' => $draft->form_type,
+                'config_id' => $draft->config_id,
+                'form_data' => $draft->form_data,
+                'current_step' => $draft->current_step,
+                'total_steps' => $draft->total_steps,
+                'progress' => $draft->getProgressPercentage(),
+                'progress_text' => $draft->getProgressPercentage() . '%',
+                'expires_at' => $draft->expires_at,
+                'updated_at' => $draft->updated_at,
+            ]
         ]);
     }
 }
