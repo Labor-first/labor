@@ -149,7 +149,16 @@ Route::middleware(['auth:api'])->prefix('admin')->group(function () {
     Route::get('/applications', [ApplicationController::class, 'index']);
 
     // [审核] 审核指定的报名申请（通过/拒绝）
-    Route::put('/applications/{id}/audit', [ApplicationController::class, 'audit']);
+        Route::put('/applications/{id}/audit', [ApplicationController::class, 'audit']);
+        
+        // [审核流程] 获取报名审核流程状态（动态反映审核进度）
+        Route::get('/applications/{id}/audit-flow', [ApplicationController::class, 'auditFlow']);
+        
+        // [批量审核] 批量审核报名
+        Route::post('/applications/batch-audit', [ApplicationController::class, 'batchAudit']);
+        
+        // [审核统计] 获取审核统计数据
+        Route::get('/applications/audit-statistics', [ApplicationController::class, 'auditStatistics']);
 
     // [导出] 导出报名数据为 Excel/CSV 文件
     Route::get('/applications/export', [ApplicationController::class, 'export']);

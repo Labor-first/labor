@@ -177,4 +177,215 @@ class ApplicationController extends Controller
         ];
         return $messages[$status] ?? '审核完成';
     }
+
+    /**
+     * 获取报名审核流程状态（动态反映审核进度）
+     * GET /api/admin/applications/{id}/audit-flow
+     */
+    public function auditFlow($id)
+    {
+        $application = ApplicationForm::with(['user' => function($q) {
+            $q->select('id', 'account', 'username', 'email', 'phone');
+        }])->findOrFail($id);
+
+        // 定义审核流程步骤
+        $flowSteps = [
+            [
+                'step' => 1,
+                'title' => '提交报名',
+                'status' => 'completed',
+                'description' => '用户已成功提交报名信息',
+                'time' => $application->created_at->format('Y-m-d H:i:s'),
+                'icon' => 'submit'
+            ],
+            [
+                'step' => 2,
+                'title' => '待审核',
+                'status' => $application->status === ApplicationForm::STATUS_PENDING ? 'current' : 
+                           ($application->status > ApplicationForm::STATUS_PENDING ? 'completed' : 'pending'),
+                'description' => '等待管理员审核',
+                'time' => $application->created_at->format('Y-m-d H:i:s'),
+                'icon' => 'pending'
+            ],
+            [
+                'step' => 3,
+                'title' => '审核中',
+                'status' => $application->audit_time ? 'completed' : 
+                           ($application->status === ApplicationForm::STATUS_PENDING ? 'pending' : 'current'),
+                'description' => '管理员正在审核',
+                'time' => $application->audit_time ? $application->audit_time->format('Y-m-d H:i:s') : null,
+                'icon' => 'processing'
+            ],
+            [
+                'step' => 4,
+                'title' => '审核结果',
+                'status' => in_array($application->status, [
+                    ApplicationForm::STATUS_APPROVED, 
+                    ApplicationForm::STATUS_REJECTED
+                ]) ? 'completed' : 'pending',
+                'description' => $this->getStatusText($application->status),
+                'time' => $application->audit_time ? $application->audit_time->format('Y-m-d H:i:s') : null,
+                'icon' => $application->status === ApplicationForm::STATUS_APPROVED ? 'success' : 
+                         ($application->status === ApplicationForm::STATUS_REJECTED ? 'reject' : 'pending'),
+                'result' => [
+                    'status' => $application->status,
+                    'status_text' => $this->getStatusText($application->status),
+                    'remark' => $application->audit_remark
+                ]
+            ]
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'application' => [
+                    'id' => $application->id,
+                    'name' => $application->name,
+                    'class' => $application->class,
+                    'academy' => $application->academy,
+                    'major' => $application->major,
+                    'status' => $application->status,
+                    'status_text' => $this->getStatusText($application->status),
+                    'created_at' => $application->created_at->format('Y-m-d H:i:s'),
+                ],
+                'user' => $application->user ? [
+                    'id' => $application->user->id,
+                    'account' => $application->user->account,
+                    'username' => $application->user->username,
+                    'email' => $application->user->email,
+                    'phone' => $application->user->phone,
+                ] : null,
+                'flow' => $flowSteps,
+                'current_step' => collect($flowSteps)->firstWhere('status', 'current')['step'] ?? 
+                                 (collect($flowSteps)->where('status', 'completed')->last()['step'] ?? 1)
+            ]
+        ]);
+    }
+
+    /**
+     * 批量审核报名
+     * POST /api/admin/applications/batch-audit
+     */
+    public function batchAudit(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required',
+            'status' => ['required', Rule::in([
+                ApplicationForm::STATUS_APPROVED,
+                ApplicationForm::STATUS_REJECTED
+            ])],
+            'audit_remark' => 'nullable|string|max:500'
+        ]);
+
+        // 兼容字符串和数组格式
+        $ids = $request->input('ids');
+        if (is_string($ids)) {
+            $ids = [$ids];
+        }
+        
+        // 验证每个ID都是整数
+        foreach ($ids as $id) {
+            if (!is_numeric($id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ID必须是数字'
+                ], 422);
+            }
+        }
+        $status = $request->input('status');
+        $remark = $request->input('audit_remark');
+
+        $results = [
+            'success' => [],
+            'failed' => []
+        ];
+
+        foreach ($ids as $id) {
+            try {
+                $application = ApplicationForm::find($id);
+                
+                if (!$application) {
+                    $results['failed'][] = [
+                        'id' => $id,
+                        'reason' => '报名记录不存在'
+                    ];
+                    continue;
+                }
+
+                if ($application->status === ApplicationForm::STATUS_CANCELLED) {
+                    $results['failed'][] = [
+                        'id' => $id,
+                        'name' => $application->name,
+                        'reason' => '已取消的报名无法审核'
+                    ];
+                    continue;
+                }
+
+                $application->update([
+                    'status' => $status,
+                    'audit_remark' => $remark,
+                    'audit_time' => now()
+                ]);
+
+                $results['success'][] = [
+                    'id' => $id,
+                    'name' => $application->name,
+                    'status' => $status,
+                    'status_text' => $this->getStatusText($status)
+                ];
+
+            } catch (\Exception $e) {
+                $results['failed'][] = [
+                    'id' => $id,
+                    'reason' => $e->getMessage()
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "批量审核完成：成功 " . count($results['success']) . " 条，失败 " . count($results['failed']) . " 条",
+            'data' => $results
+        ]);
+    }
+
+    /**
+     * 获取审核统计
+     * GET /api/admin/applications/audit-statistics
+     */
+    public function auditStatistics(Request $request)
+    {
+        $configId = $request->input('config_id');
+        
+        $query = ApplicationForm::query();
+        if ($configId) {
+            $query->where('config_id', $configId);
+        }
+
+        $statistics = [
+            'total' => $query->count(),
+            'pending' => (clone $query)->where('status', ApplicationForm::STATUS_PENDING)->count(),
+            'approved' => (clone $query)->where('status', ApplicationForm::STATUS_APPROVED)->count(),
+            'rejected' => (clone $query)->where('status', ApplicationForm::STATUS_REJECTED)->count(),
+            'cancelled' => (clone $query)->where('status', ApplicationForm::STATUS_CANCELLED)->count(),
+        ];
+
+        // 今日审核统计
+        $todayQuery = (clone $query)->whereDate('audit_time', today());
+        $statistics['today'] = [
+            'total' => $todayQuery->count(),
+            'approved' => (clone $todayQuery)->where('status', ApplicationForm::STATUS_APPROVED)->count(),
+            'rejected' => (clone $todayQuery)->where('status', ApplicationForm::STATUS_REJECTED)->count(),
+        ];
+
+        // 审核率
+        $statistics['approval_rate'] = $statistics['total'] > 0 
+            ? round($statistics['approved'] / $statistics['total'] * 100, 2) 
+            : 0;
+
+        return response()->json([
+            'success' => true,
+            'data' => $statistics
+        ]);
+    }
 }
