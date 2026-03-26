@@ -769,4 +769,86 @@ class LxController extends Controller
             ]
         ]);
     }
+
+    /**
+     * 草稿回显接口
+     * 用户再次进入页面时，加载已保存的草稿数据
+     * 支持根据 device_id + form_type + config_id 精准获取最新草稿
+     */
+    public function loadDraft(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+            'form_type' => 'required|string|max:50',
+            'config_id' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $deviceId = $request->input('device_id');
+        $formType = $request->input('form_type');
+        $configId = $request->input('config_id');
+
+        // 构建查询
+        $query = FormDraft::where('device_id', $deviceId)
+            ->where('form_type', $formType);
+
+        if ($configId) {
+            $query->where('config_id', $configId);
+        }
+
+        // 获取最新的草稿（按更新时间倒序）
+        $draft = $query->orderBy('updated_at', 'desc')->first();
+
+        // 没有找到草稿
+        if (!$draft) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '暂无草稿数据',
+                'data' => [
+                    'has_draft' => false,
+                    'form_data' => null,
+                ]
+            ]);
+        }
+
+        // 检查草稿是否过期
+        if ($draft->isExpired()) {
+            $draft->delete();
+            return response()->json([
+                'code' => 410,
+                'msg' => '草稿已过期，请重新填写',
+                'data' => [
+                    'has_draft' => false,
+                    'form_data' => null,
+                    'expired_at' => $draft->expires_at,
+                ]
+            ], 410);
+        }
+
+        // 返回草稿数据，用于回显
+        return response()->json([
+            'code' => 200,
+            'msg' => '草稿加载成功',
+            'data' => [
+                'has_draft' => true,
+                'draft_id' => $draft->id,
+                'form_type' => $draft->form_type,
+                'config_id' => $draft->config_id,
+                'form_data' => $draft->form_data,
+                'current_step' => $draft->current_step,
+                'total_steps' => $draft->total_steps,
+                'progress' => $draft->getProgressPercentage(),
+                'progress_text' => $draft->getProgressPercentage() . '%',
+                'expires_at' => $draft->expires_at,
+                'updated_at' => $draft->updated_at,
+            ]
+        ]);
+    }
 }

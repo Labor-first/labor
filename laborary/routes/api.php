@@ -128,6 +128,8 @@ Route::prefix('drafts')->group(function () {
     Route::post('/', [LxController::class, 'saveDraft']);
     // [读取] 获取指定类型的草稿
     Route::get('/', [LxController::class, 'getDraft']);
+    // [读取] 草稿回显接口 - 页面加载时获取草稿数据
+    Route::get('/load', [LxController::class, 'loadDraft']);
     // [读取] 获取设备的所有草稿列表
     Route::get('/list', [LxController::class, 'getDraftList']);
     // [删除] 删除指定草稿
