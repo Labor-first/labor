@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('homeworks', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->references('id')->on('lab_users')->onDelete('cascade');
             $table->text('content')->nullable()->comment('作业内容');
             $table->string('attachment')->nullable()->comment('附件地址');
             $table->integer('score')->nullable()->comment('得分');
