@@ -15,13 +15,10 @@ class LabUser extends Authenticatable implements JWTSubject
 {
     use HasFactory, HasApiTokens, Notifiable;
 
-
-
     protected function serializeDate(\DateTimeInterface $date): string
     {
         return Carbon::instance($date)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s');
     }
-
 
     protected $table = 'lab_users';
 
@@ -91,10 +88,17 @@ class LabUser extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(\App\Models\LabNews::class, 'author_id');
     }
+
     // 用户的报名记录【一对一！只能有一个！】
     public function applicationForm(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(ApplicationForm::class, 'user_id');
+    }
+
+    // 👇 👇 👇 我给你新加的【作业关联】（不影响你原有代码）
+    public function homeworks(): HasMany
+    {
+        return $this->hasMany(Homework::class, 'user_id');
     }
 
     /**
