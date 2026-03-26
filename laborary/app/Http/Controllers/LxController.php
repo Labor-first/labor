@@ -503,7 +503,6 @@ class LxController extends Controller
 
     /**
      * 保存表单草稿
-     * 支持断点续填功能，保存未完成的表单数据（无需登录，使用device_id标识）
      */
     public function saveDraft(Request $request)
     {
@@ -580,6 +579,7 @@ class LxController extends Controller
     public function getDraft(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
             'form_type' => 'required|string|max:50',
             'config_id' => 'nullable|integer',
         ]);
@@ -592,20 +592,11 @@ class LxController extends Controller
             ], 400);
         }
 
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json([
-                'code' => 401,
-                'msg' => '未登录，无法获取草稿',
-                'data' => null
-            ], 401);
-        }
-
-        $userId = $user->id;
+        $deviceId = $request->input('device_id');
         $formType = $request->input('form_type');
         $configId = $request->input('config_id');
 
-        $query = FormDraft::where('user_id', $userId)
+        $query = FormDraft::where('device_id', $deviceId)
             ->where('form_type', $formType);
 
         if ($configId) {
