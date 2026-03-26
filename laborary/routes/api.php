@@ -77,7 +77,7 @@ Route::prefix('user')->group(function () {
 Route::prefix('forgot-password')->group(function () {
     // [发送] 发送重置密码验证码到邮箱
     Route::post('/send-code', [FmyController::class, 'sendResetCode']);
-    
+
     // [重置] 验证验证码并重置密码
     Route::post('/reset', [FmyController::class, 'resetPassword']);
 });
@@ -106,6 +106,11 @@ Route::middleware('auth:api')->group(function () {
 
         // [安全] 修改登录密码
         Route::post('/change-password', [FmyController::class, 'changePassword']);
+
+        //发布/保存通知
+        Route::post('/training-notifications', [FmyController::class, 'store']);
+        //获取当前登录用户的草稿列表
+        Route::get('/training-notifications/drafts', [FmyController::class, 'getDrafts']);
     });
 });
 

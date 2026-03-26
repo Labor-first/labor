@@ -8,20 +8,24 @@ use App\Http\Requests\CheckRegistrationStatusRequest;
 use App\Http\Requests\CancelRegistrationRequest;
 use App\Http\Requests\StoreRegistrationRequest;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreTrainingNotificationRequest;
 use App\Models\ApplicationForm;
+use App\Models\Homework;
 use App\Models\RegistrationConfig;
-use App\Models\LabUser; // 假设你的用户模型是 LabUser
-
+use App\Models\LabUser;
+use App\Models\TrainingNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Facades\Request;
 use Throwable;
 use Illuminate\Support\Facades\Auth; // 用于 Sanctum 认证
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\ResetPasswordCode;
+use App\Mail\TrainingNotificationMail;
 
 class FmyController extends Controller
 {
@@ -183,7 +187,7 @@ class FmyController extends Controller
         }
 
         $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        
+
         $cacheKey = "reset_code:{$user->account}";
         Cache::put($cacheKey, [
             'code' => $code,
@@ -193,7 +197,7 @@ class FmyController extends Controller
 
         try {
             Mail::to($user->email)->send(new ResetPasswordCode($code, $user->username));
-            
+
             return response()->json([
                 'code' => 200,
                 'message' => '验证码已发送到您的邮箱，有效期10分钟',
@@ -203,7 +207,7 @@ class FmyController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Send Reset Code Error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'code' => 500,
                 'message' => '验证码发送失败，请稍后重试',
@@ -260,7 +264,7 @@ class FmyController extends Controller
         if ($cachedData['code'] !== $request->code) {
             $cachedData['attempts']++;
             Cache::put($cacheKey, $cachedData, now()->addMinutes(10));
-            
+
             return response()->json([
                 'code' => 400,
                 'message' => '验证码错误，请重新输入',
@@ -297,17 +301,17 @@ class FmyController extends Controller
         if (count($parts) !== 2) {
             return $email;
         }
-        
+
         $name = $parts[0];
         $domain = $parts[1];
-        
+
         $nameLength = strlen($name);
         if ($nameLength <= 2) {
             $maskedName = $name[0] . '***';
         } else {
             $maskedName = substr($name, 0, 2) . '***' . substr($name, -1);
         }
-        
+
         return $maskedName . '@' . $domain;
     }
 
@@ -543,6 +547,303 @@ class FmyController extends Controller
             return response()->json([
                 'code' => 500,
                 'message' => '系统繁忙，撤销失败',
+                'data' => null
+            ], 500);
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /**
+     * 发布/保存培训通知
+     */
+    public function store(StoreTrainingNotificationRequest $request): JsonResponse
+    {
+        // 检查是否登录
+        if (!Auth::check()) {
+            return response()->json([
+                'code' => 401,
+                'message' => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        $data = $request->validated();
+
+        try {
+            $sendTimeType = $data['send_time_type'];
+            $scheduledTime = $data['scheduled_time']??null;
+            $isDraft = $data['is_draft'];
+
+            // 验证：立即发送时不能为草稿
+            if ($sendTimeType === 'immediate' && $isDraft) {
+                return response()->json([
+                    'code' => 400,
+                    'message' => '立即发送时不能保存为草稿',
+                    'data' => null
+                ], 400);
+            }
+            // 验证定时发送时间
+            if ($sendTimeType === 'scheduled') {
+                if (empty($scheduledTime)) {
+                    return response()->json([
+                        'code' => 400,
+                        'message' => '定时发送时间不能为空',
+                        'data' => null
+                    ], 400);
+                }
+
+                $scheduledTimestamp = strtotime($scheduledTime);
+                // 使用北京时间（东八区）
+                $currentTime = strtotime(now()->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s'));
+                
+                // 调试日志
+                Log::info('定时时间验证', [
+                    'scheduledTime' => $scheduledTime,
+                    'scheduledTimestamp' => $scheduledTimestamp,
+                    'currentTime' => $currentTime,
+                    'currentTimeBeijing' => now()->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s'),
+                    'sendTimeType' => $sendTimeType
+                ]);
+                
+                if ($scheduledTimestamp === false) {
+                    return response()->json([
+                        'code' => 400,
+                        'message' => '定时发送时间格式无效',
+                        'data' => null
+                    ], 400);
+                }
+
+                if ($scheduledTimestamp <= $currentTime) {
+                    return response()->json([
+                        'code' => 400,
+                        'message' => '定时发送时间必须大于当前时间',
+                        'data' => [
+                            'scheduled_time' => $scheduledTime,
+                            'scheduled_timestamp' => $scheduledTimestamp,
+                            'current_time' => date('Y-m-d H:i:s', $currentTime)
+                        ]
+                    ], 400);
+                }
+            }
+
+            // 系统生成 status
+            $status = $isDraft ? 'draft' : ($sendTimeType === 'immediate' ? 'sent' : 'pending');
+
+            // 获取当前登录用户ID
+            $userId = Auth::guard('api')->user()->id;
+
+            // 创建通知
+            $notification = TrainingNotification::create([
+                'title' => $data['title'],
+                'content' => $data['content'],
+                'target' => $data['target'],
+                'target_ids' => $data['target_ids'] ?? null,
+                'send_time_type' => $sendTimeType,
+                'scheduled_time' => $sendTimeType === 'scheduled' ? $scheduledTime : null,
+                'is_draft' => $isDraft,
+                'status' => $status,
+                'created_id' => $userId,
+                'sent_at' => null, // 发送成功后再更新
+            ]);
+
+
+            // 不是草稿 → 直接发送
+            if (!$isDraft) {
+                try {
+                    // 执行真正发送
+                    $this->sendNotification($notification);
+
+                    // 发送成功 → 更新状态和发送时间
+                    $notification->update([
+                        'status' => 'sent',
+                        'sent_at' => now()
+                    ]);
+
+                } catch (\Exception $e) {
+                    // 发送失败 → 更新状态
+                    $notification->update(['status' => 'failed']);
+
+                    Log::error('培训通知发送失败', [
+                        'id' => $notification->id,
+                        'error' => $e->getMessage()
+                    ]);
+
+                    return response()->json([
+                        'code' => 500,
+                        'message' => '通知保存成功，但发送失败，请稍后重试',
+                        'data' => [
+                            'id' => $notification->id,
+                            'status' => 'failed'
+                        ]
+                    ], 500);
+                }
+            }
+
+            $message = $isDraft ? '草稿保存成功' :
+                ($sendTimeType === 'immediate' ? '通知发送成功' : '定时发送设置成功');
+
+            return response()->json([
+                'code' => 200,
+                'message' => $message,
+                'data' => [
+                    'id' => $notification->id,
+                    'title' => $notification->title,
+                    'status' => $notification->status,
+                    'send_time_type' => $notification->send_time_type,
+                    'scheduled_time' => $notification->scheduled_time,
+                    'sent_at' => $notification->sent_at,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('保存培训通知失败', [
+                'error' => $e->getMessage(),
+                'data' => $data
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => '操作失败，请稍后重试',
+                'data' => null
+            ], 500);
+        }
+    }
+
+    /**
+     * 真正发送通知（支持：all全部 / week指定周次 / trainee指定学员）
+     */
+    private function sendNotification(TrainingNotification $notification): void
+    {
+        $title = $notification->title;
+        $content = $notification->content;
+        $target = $notification->target;
+        $targetIds = $notification->target_ids;
+
+        Log::info('【正式发送培训通知】', [
+            '通知ID' => $notification->id,
+            '标题' => $title,
+            '目标类型' => $target,
+            '目标ID' => $targetIds,
+        ]);
+
+        $users = collect();
+
+        switch ($target) {
+            case 'all':
+                $users = LabUser::select('id', 'username', 'email')
+                    ->whereNotNull('email')
+                    ->get();
+                break;
+
+            case 'week':
+                if (empty($targetIds)) break;
+                $users = Homework::whereIn('week', $targetIds)
+                    ->join('lab_users', 'homework.user_id', '=', 'lab_users.id')
+                    ->select('lab_users.id', 'lab_users.name', 'lab_users.email')
+                    ->whereNotNull('lab_users.email')
+                    ->distinct()
+                    ->get();
+                break;
+
+            case 'trainee':
+                if (empty($targetIds)) break;
+                $users = LabUser::whereIn('id', $targetIds)
+                    ->select('id', 'username', 'email')
+                    ->whereNotNull('email')
+                    ->get();
+                break;
+
+            default:
+                throw new \Exception('不支持的发送目标类型: ' . $target);
+        }
+
+        if ($users->isEmpty()) {
+            throw new \Exception('未找到任何接收用户');
+        }
+
+        // 发送邮件给每个用户
+        $successCount = 0;
+        $failCount = 0;
+
+        foreach ($users as $user) {
+            try {
+                Mail::to($user->email)->send(new TrainingNotificationMail($title, $content));
+                $successCount++;
+                Log::info('邮件发送成功', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'notification_id' => $notification->id
+                ]);
+            } catch (\Exception $e) {
+                $failCount++;
+                Log::error('邮件发送失败', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        Log::info('培训通知发送完成', [
+            'notification_id' => $notification->id,
+            '总用户数' => $users->count(),
+            '成功' => $successCount,
+            '失败' => $failCount
+        ]);
+
+        // 如果全部失败，抛出异常
+        if ($failCount === $users->count()) {
+            throw new \Exception('所有邮件发送失败');
+        }
+    }
+        /**
+     * 获取当前登录用户未发布的草稿
+     */
+    public function getDrafts(Request $request): JsonResponse
+    {
+        // 检查是否登录
+        if (!Auth::check()) {
+            return response()->json([
+                'code' => 401,
+                'message' => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        try {
+            $userId = Auth::guard('api')->user()->id;
+            $drafts = TrainingNotification::where('created_id', $userId)
+                ->where('is_draft', true)
+                ->where('status', 'draft')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'code' => 200,
+                'message' => '获取草稿列表成功',
+                'data' => $drafts
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('获取草稿列表失败', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => '获取草稿列表失败，请稍后重试',
                 'data' => null
             ], 500);
         }
