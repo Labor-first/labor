@@ -126,6 +126,12 @@ Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']
 
 
 
+// 培训管理接口
+Route::get('/training/stats', [WjcController::class, 'stats']);
+Route::get('/training/learn-progress', [WjcController::class, 'learnProgress']);
+Route::get('/training/homework/pending-correction', [WjcController::class, 'pendingCorrection']);
+Route::get('/training/homework/{homeworkId}', [WjcController::class, 'homeworkDetail']);
+Route::put('/training/homework/{homeworkId}/correct', [WjcController::class, 'correctHomework']);
 
 // --- 表单草稿模块 (公开) ---
 // 支持断点续填功能，保存未完成的表单数据（无需登录，使用device_id标识）
