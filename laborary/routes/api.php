@@ -10,6 +10,7 @@ use App\Http\Controllers\WjcController;
 use App\Http\Controllers\Admin\ApplicationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SystemController;
+use App\Http\Controllers\Admin\TrainingWeekController;
 
 
 
@@ -177,3 +178,11 @@ Route::middleware(['auth:api'])->prefix('admin')->group(function () {
     // [监控] 获取系统当前运行状态（健康检查）
     Route::get('/system/status', [SystemController::class, 'status']);
 });
+   
+
+    // --- 培训周次管理 (管理员专用) ---
+    Route::get('/training-weeks', [TrainingWeekController::class, 'index']);
+    Route::post('/training-weeks', [TrainingWeekController::class, 'store']);
+    Route::get('/training-weeks/{id}', [TrainingWeekController::class, 'show']);
+    Route::put('/training-weeks/{id}', [TrainingWeekController::class, 'update']);
+    Route::post('/training-weeks/{id}/publish', [TrainingWeekController::class, 'publish']);
