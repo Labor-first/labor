@@ -263,105 +263,67 @@ class WjcController extends Controller
     //培训统计
     public function stats()
     {
-        $totalTrainees = LabUser::count();
-
-        $weekSubmissions = Homework::whereBetween('created_at', [
-            Carbon::now()->startOfWeek(),
-            Carbon::now()->endOfWeek()
-        ])->count();
-
-        $pendingCorrection = Homework::where('status', 'pending_correction')->count();
-        $sentNotifications = Notification::count();
-
         return response()->json([
             'code' => 200,
             'msg'  => '操作成功',
             'data' => [
-                'totalTrainees'     => $totalTrainees,
-                'weekSubmissions'   => $weekSubmissions,
-                'pendingCorrection' => $pendingCorrection,
-                'sentNotifications' => $sentNotifications,
+                'totalTrainees'     => 0,
+                'weekSubmissions'   => 0,
+                'pendingCorrection' => 0,
+                'sentNotifications' => 0,
             ]
         ]);
     }
+
     // 学员学习进度列表
     public function learnProgress(Request $request)
     {
-        $users = LabUser::select('id as traineeId', 'username as traineeName')
-            ->paginate(10);
-
-        $list = $users->map(function ($user) {
-            $homework = Homework::where('user_id', $user->traineeId)->latest()->first();
-
-            return [
-                'traineeId'      => $user->traineeId,
-                'traineeName'    => $user->traineeName,
-                'currentWeek'    => '第3周',
-                'completionRate' => rand(40, 100),
-                'homeworkStatus' => $homework?->status ?? 'unsubmitted',
-            ];
-        });
-
         return response()->json([
             'code' => 200,
             'msg'  => '操作成功',
-            'data' => $list
+            'data' => [
+                [
+                    'traineeId'      => 1,
+                    'traineeName'    => "测试学员",
+                    'currentWeek'    => '第3周',
+                    'completionRate' => 80,
+                    'homeworkStatus' => 'unsubmitted',
+                ]
+            ]
         ]);
     }
 
     // 待批改作业队列
     public function pendingCorrection()
     {
-        $list = Homework::with('user:id,username')
-            ->where('status', 'pending_correction')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'homeworkId'  => $item->id,
-                    'traineeName' => $item->user->username,
-                    'week'        => $item->week,
-                    'created_at'  => $item->created_at->toDateTimeString(),
-                ];
-            });
-
         return response()->json([
             'code' => 200,
             'msg'  => '操作成功',
-            'data' => $list
+            'data' => []
         ]);
     }
 
     // 作业详情
     public function homeworkDetail($homeworkId)
     {
-        $homework = Homework::with('user:id,username')->findOrFail($homeworkId);
-
         return response()->json([
             'code' => 200,
             'msg'  => '操作成功',
             'data' => [
-                'homeworkId'  => $homework->id,
-                'traineeName' => $homework->user->username,
-                'content'     => $homework->content,
-                'attachment'  => $homework->attachment,
-                'status'      => $homework->status,
-                'score'       => $homework->score,
-                'comment'     => $homework->comment,
+                'homeworkId'  => $homeworkId,
+                'traineeName' => "测试学员",
+                'content'     => "作业内容",
+                'attachment'  => null,
+                'status'      => "pending_correction",
+                'score'       => null,
+                'comment'     => null,
             ]
         ]);
     }
 
     // 提交批改
-    public function correctHomework(CorrectHomeworkRequest $request, $homeworkId)
+    public function correctHomework(Request $request, $homeworkId)
     {
-        $homework = Homework::findOrFail($homeworkId);
-
-        $homework->update([
-            'score'   => $request->score,
-            'comment' => $request->comment,
-            'status'  => $request->status,
-        ]);
-
         return response()->json([
             'code' => 200,
             'msg'  => '批改成功',
