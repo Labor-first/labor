@@ -33,33 +33,39 @@ Route::middleware(['auth:api', 'admin.role'])->prefix('admin/lab')->group(functi
     Route::delete('/config', [LxController::class, 'deleteLabConfig']);
 });
 
-// --- 部门管理模块 (公开) ---
+// --- 部门管理模块 ---
 Route::prefix('departments')->group(function () {
-    // 获取所有部门列表
+    // [读取] 获取所有部门列表（公开）
     Route::get('/', [LxController::class, 'getDepartments']);
-    // 获取指定 ID 的部门详细信息
+    // [读取] 获取指定 ID 的部门详细信息（公开）
     Route::get('/{id}', [LxController::class, 'getDepartmentDetail']);
+});
 
-    //新增一个部门
+// --- 部门管理 (管理员专用) ---
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin/departments')->group(function () {
+    // [写入] 新增一个部门
     Route::post('/', [LxController::class, 'createDepartment']);
-    // 修改指定 ID 的部门信息
+    // [写入] 修改指定 ID 的部门信息
     Route::put('/{id}', [LxController::class, 'updateDepartment']);
-    // 删除指定 ID 的部门
+    // [删除] 删除指定 ID 的部门
     Route::delete('/{id}', [LxController::class, 'deleteDepartment']);
 });
 
-// --- 新闻公告模块 (公开) ---
+// --- 新闻公告模块 ---
 Route::prefix('lab-news')->group(function () {
-    // [读取] 获取新闻列表（支持分页/筛选）
+    // [读取] 获取新闻列表（支持分页/筛选）（公开）
     Route::get('/', [LxController::class, 'getNewsList']);
-    // [读取] 获取指定 ID 的新闻详细内容
+    // [读取] 获取指定 ID 的新闻详细内容（公开）
     Route::get('/{id}', [LxController::class, 'getNewsDetail']);
+});
 
-    // 发布新新闻
+// --- 新闻公告管理 (管理员专用) ---
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin/lab-news')->group(function () {
+    // [写入] 发布新新闻
     Route::post('/', [LxController::class, 'createNews']);
-    // 编辑指定 ID 的新闻
+    // [写入] 编辑指定 ID 的新闻
     Route::put('/{id}', [LxController::class, 'updateNews']);
-    // 删除指定 ID 的新闻
+    // [删除] 删除指定 ID 的新闻
     Route::delete('/{id}', [LxController::class, 'deleteNews']);
 });
 
