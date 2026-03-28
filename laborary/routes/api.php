@@ -19,14 +19,16 @@ Route::get('/test', function () {
     return response()->json(['msg' => 'API 正常工作', 'time' => now()]);
 });
 
-// --- 实验室配置模块 (公开) ---
+// --- 实验室配置模块 ---
 Route::prefix('lab')->group(function () {
-    // [读取] 获取实验室的全局配置信息
+    // [读取] 获取实验室的全局配置信息（公开）
     Route::get('/config', [LxController::class, 'getLabConfig']);
+});
 
+// --- 实验室配置管理 (管理员专用) ---
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin/lab')->group(function () {
     // [写入] 保存/更新实验室配置
     Route::post('/config', [LxController::class, 'saveLabConfig']);
-
     // [删除] 删除实验室配置
     Route::delete('/config', [LxController::class, 'deleteLabConfig']);
 });
