@@ -35,10 +35,19 @@ class LxController extends Controller
     }
 
     /**
-     * 创建或更新实验室配置
+     * 创建或更新实验室配置（管理员专用）
      */
     public function saveLabConfig(Request $request)
     {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'intro' => 'required|string',
@@ -75,10 +84,19 @@ class LxController extends Controller
     }
 
     /**
-     * 删除实验室配置
+     * 删除实验室配置（管理员专用）
      */
-    public function deleteLabConfig()
+    public function deleteLabConfig(Request $request)
     {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
         $config = LabConfig::first();
 
         if (!$config) {
@@ -155,10 +173,19 @@ class LxController extends Controller
     }
 
     /**
-     * 创建部门
+     * 创建部门（管理员专用）
      */
     public function createDepartment(Request $request)
     {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255|unique:departments,name',
             'intro' => 'nullable|string',
@@ -189,10 +216,19 @@ class LxController extends Controller
     }
 
     /**
-     * 更新部门
+     * 更新部门（管理员专用）
      */
     public function updateDepartment(Request $request, $id)
     {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
         $department = Department::find($id);
 
         if (!$department) {
@@ -244,10 +280,19 @@ class LxController extends Controller
     }
 
     /**
-     * 删除部门
+     * 删除部门（管理员专用）
      */
-    public function deleteDepartment($id)
+    public function deleteDepartment(Request $request, $id)
     {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
         $department = Department::find($id);
 
         if (!$department) {
@@ -386,10 +431,19 @@ class LxController extends Controller
     }
 
     /**
-     * 创建新闻
+     * 创建新闻（管理员专用）
      */
     public function createNews(Request $request)
     {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'content' => 'required|string',
@@ -424,10 +478,19 @@ class LxController extends Controller
     }
 
     /**
-     * 更新新闻
+     * 更新新闻（管理员专用）
      */
     public function updateNews(Request $request, $id)
     {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
         $news = LabNews::find($id);
 
         if (!$news) {
@@ -476,10 +539,19 @@ class LxController extends Controller
     }
 
     /**
-     * 删除新闻
+     * 删除新闻（管理员专用）
      */
-    public function deleteNews($id)
+    public function deleteNews(Request $request, $id)
     {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
         $news = LabNews::find($id);
 
         if (!$news) {
