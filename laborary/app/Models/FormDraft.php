@@ -30,7 +30,7 @@ class FormDraft extends Model
 
     public function getExpiresAtAttribute($value)
     {
-        return $value ? Carbon::parse($value)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s') : null;
+        return $value ? Carbon::parse($value)->setTimezone('Asia/Shanghai') : null;
     }
 
     protected $fillable = [
@@ -61,7 +61,14 @@ class FormDraft extends Model
      */
     public function isExpired(): bool
     {
-        return $this->expires_at && $this->expires_at->isPast();
+        if (!$this->expires_at) {
+            return false;
+        }
+        // 确保 expires_at 是 Carbon 对象
+        $expiresAt = $this->expires_at instanceof Carbon 
+            ? $this->expires_at 
+            : Carbon::parse($this->expires_at);
+        return $expiresAt->isPast();
     }
 
     /**

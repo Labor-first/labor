@@ -642,7 +642,7 @@ class LxController extends Controller
         $validator = Validator::make($request->all(), [
             'device_id' => 'required|string|max:255',
             'form_type' => 'required|string|max:50',
-            'config_id' => 'nullable|integer|exists:registration_configs,id',
+            'config_id' => 'nullable|integer|exists:registration_configs,id',//可选，用于指定注册配置
             'form_data' => 'required|array',
             'current_step' => 'nullable|integer|min:1',
             'total_steps' => 'nullable|integer|min:1',
