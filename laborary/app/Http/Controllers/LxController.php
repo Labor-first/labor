@@ -1087,4 +1087,80 @@ class LxController extends Controller
             'data' => null
         ], 404);
     }
+
+    /**
+     * 保存附件信息到草稿
+     * 将上传的文件信息关联到报名表草稿中
+     */
+    public function saveDraftAttachments(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'device_id' => 'required|string|max:255',
+            'form_type' => 'required|string|max:50',
+            'config_id' => 'nullable|integer',
+            'attachments' => 'required|array',
+            'attachments.*.fileId' => 'required|string',
+            'attachments.*.fileName' => 'required|string',
+            'attachments.*.fileUrl' => 'required|string',
+            'attachments.*.fileType' => 'required|string|in:resume,portfolio,certificate,other',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $deviceId = $request->input('device_id');
+        $formType = $request->input('form_type');
+        $configId = $request->input('config_id');
+        $attachments = $request->input('attachments');
+
+        // 查找草稿
+        $query = FormDraft::where('device_id', $deviceId)
+            ->where('form_type', $formType);
+
+        if ($configId) {
+            $query->where('config_id', $configId);
+        }
+
+        $draft = $query->first();
+
+        // 如果没有草稿，创建一个新草稿
+        if (!$draft) {
+            $draft = FormDraft::create([
+                'device_id' => $deviceId,
+                'form_type' => $formType,
+                'config_id' => $configId,
+                'form_data' => [
+                    'attachments' => $attachments,
+                ],
+                'current_step' => 1,
+                'total_steps' => 1,
+                'expires_at' => now()->addDays(7),
+            ]);
+            $msg = '附件保存成功（已创建新草稿）';
+        } else {
+            // 更新现有草稿的附件信息
+            $formData = $draft->form_data ?? [];
+            $formData['attachments'] = $attachments;
+            $draft->update([
+                'form_data' => $formData,
+                'expires_at' => now()->addDays(7),
+            ]);
+            $msg = '附件保存成功';
+        }
+
+        return response()->json([
+            'code' => 200,
+            'msg' => $msg,
+            'data' => [
+                'draft_id' => $draft->id,
+                'attachments_count' => count($attachments),
+                'attachments' => $attachments,
+            ]
+        ]);
+    }
 }

@@ -158,5 +158,10 @@ Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function (
 // 报名表附件上传（支持简历/作品集/证明材料）
 Route::prefix('file')->group(function () {
     Route::post('/upload', [LxController::class, 'uploadFile']); // 上传文件
-    Route::delete('/delete', [LxController::class, 'deleteFile']);  //删除已上传的文件
+    Route::delete('/delete', [LxController::class, 'deleteFile']);//删除已上传的文件
+});
+
+// --- 草稿附件管理 (公开) ---
+Route::prefix('drafts')->group(function () {
+    Route::post('/attachments', [LxController::class, 'saveDraftAttachments']);// [写入] 保存附件信息到草稿
 });
