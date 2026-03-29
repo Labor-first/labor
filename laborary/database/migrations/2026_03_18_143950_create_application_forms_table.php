@@ -27,12 +27,12 @@ return new class extends Migration
             $table->index('user_id');
             $table->index('status');
             $table->timestamps();
-            
+
             $table->foreign('config_id')->references('id')->on('registration_configs')->onDelete('cascade');
             $table->unique(['config_id', 'user_id'], 'unique_user_config');
         });
     }
-    
+
 
     /**
      * Reverse the migrations.

@@ -79,8 +79,6 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/update-info', [WjcController::class, 'updateInfo']);//修改用户个人资料（如姓名、电话等）
         Route::get('/me', [FmyController::class, 'me']);//获取当前登录用户的详细信息
         Route::post('/change-password', [FmyController::class, 'changePassword']);//修改登录密码
-        Route::post('/training-notifications', [FmyController::class, 'store']);//发布/保存通知
-        Route::get('/training-notifications/drafts', [FmyController::class, 'getDrafts']);//获取当前登录用户的草稿列表
     });
 });
 
@@ -89,7 +87,10 @@ Route::post('/registration', [FmyController::class, 'registrationStore']);//提�
 Route::get('/registration/status', [FmyController::class, 'CheckRegistrationStatus']);//查看当前用户的报名状态（需传参 config_id）
 Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);//取消/撤回已提交的报名申请
 
-
+Route::middleware(['auth:api', 'admin.role'])->group(function () {
+    Route::post('/training-notifications', [FmyController::class, 'store']);//发布/保存通知
+    Route::get('/training-notifications/drafts', [FmyController::class, 'getDrafts']);//获取当前登录用户的草稿列表
+});
 
 // 培训管理接口
 Route::get('/training/stats', [WjcController::class, 'stats']);

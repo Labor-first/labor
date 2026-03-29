@@ -607,7 +607,7 @@ class FmyController extends Controller
                 $scheduledTimestamp = strtotime($scheduledTime);
                 // 使用北京时间（东八区）
                 $currentTime = strtotime(now()->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s'));
-                
+
                 // 调试日志
                 Log::info('定时时间验证', [
                     'scheduledTime' => $scheduledTime,
@@ -616,7 +616,7 @@ class FmyController extends Controller
                     'currentTimeBeijing' => now()->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s'),
                     'sendTimeType' => $sendTimeType
                 ]);
-                
+
                 if ($scheduledTimestamp === false) {
                     return response()->json([
                         'code' => 400,
@@ -742,7 +742,7 @@ class FmyController extends Controller
 
         switch ($target) {
             case 'all':
-                $users = LabUser::select('id', 'username', 'email')
+                $users = ApplicationForm::select('id', 'username', 'email')
                     ->whereNotNull('email')
                     ->get();
                 break;
