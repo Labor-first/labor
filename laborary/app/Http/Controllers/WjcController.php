@@ -37,7 +37,8 @@ class WjcController extends Controller
         
         // 检查用户是否已激活
         if (!$user->is_active) {
-            JWTAuth::invalidate(JWTAuth::getToken());
+            // 用户未激活，直接返回错误，不处理 token
+            // 因为登录时生成的临时 token 不需要特别注销
             return response()->json([
                 'code' => 403,
                 'msg' => '账号未激活，请先验证激活码',

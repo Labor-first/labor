@@ -43,51 +43,51 @@ Route::prefix('departments')->group(function () {
 
 // --- 部门管理 (管理员专用) ---
 Route::middleware(['auth:api', 'admin.role'])->prefix('admin/departments')->group(function () {
-    // [写入] 新增一个部门
+    // 新增一个部门
     Route::post('/', [LxController::class, 'createDepartment']);
-    // [写入] 修改指定 ID 的部门信息
+    // 修改指定 ID 的部门信息
     Route::put('/{id}', [LxController::class, 'updateDepartment']);
-    // [删除] 删除指定 ID 的部门
+    // 删除指定 ID 的部门
     Route::delete('/{id}', [LxController::class, 'deleteDepartment']);
 });
 
 // --- 新闻公告模块 ---
 Route::prefix('lab-news')->group(function () {
-    // [读取] 获取新闻列表（支持分页/筛选）（公开）
+    //获取新闻列表（支持分页/筛选）（公开）
     Route::get('/', [LxController::class, 'getNewsList']);
-    // [读取] 获取指定 ID 的新闻详细内容（公开）
+    //获取指定 ID 的新闻详细内容（公开）
     Route::get('/{id}', [LxController::class, 'getNewsDetail']);
 });
 
 // --- 新闻公告管理 (管理员专用) ---
 Route::middleware(['auth:api', 'admin.role'])->prefix('admin/lab-news')->group(function () {
-    // [写入] 发布新新闻
+    //发布新新闻
     Route::post('/', [LxController::class, 'createNews']);
-    // [写入] 编辑指定 ID 的新闻
+    //编辑指定 ID 的新闻
     Route::put('/{id}', [LxController::class, 'updateNews']);
-    // [删除] 删除指定 ID 的新闻
+    //删除指定 ID 的新闻
     Route::delete('/{id}', [LxController::class, 'deleteNews']);
 });
 
 // --- 用户认证模块 (无需登录) ---
 // 专门用于用户登录和激活流程
 Route::prefix('user')->group(function () {
-    // [认证] 用户登录（账号密码验证，返回 Token）
+    //用户登录（账号密码验证，返回 Token）
     Route::post('/login', [WjcController::class, 'login'])->name('login');
 
-    // [通知] 发送账户激活码（通常发送到邮箱或手机）
+    //发送账户激活码（通常发送到邮箱或手机）
     Route::post('/send-activation-code', [WjcController::class, 'sendActivationCode']);
 
-    // [验证] 验证用户提交的激活码是否正确
+    //验证用户提交的激活码是否正确
     Route::post('/verify-activation-code', [WjcController::class, 'verifyActivationCode']);
 });
 
 // --- 忘记密码模块 (无需登录) ---
 Route::prefix('forgot-password')->group(function () {
-    // [发送] 发送重置密码验证码到邮箱
+    //发送重置密码验证码到邮箱
     Route::post('/send-code', [FmyController::class, 'sendResetCode']);
 
-    // [重置] 验证验证码并重置密码
+    //验证验证码并重置密码
     Route::post('/reset', [FmyController::class, 'resetPassword']);
 });
 
