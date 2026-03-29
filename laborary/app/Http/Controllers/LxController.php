@@ -84,6 +84,67 @@ class LxController extends Controller
     }
 
     /**
+     * 建立实验室（管理员专用）
+     * 用于首次创建实验室配置，如果已存在则返回错误
+     */
+    public function createLab(Request $request)
+    {
+        // 检查是否为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限才能操作',
+                'data' => null
+            ], 403);
+        }
+
+        // 检查是否已存在实验室配置
+        $existingConfig = LabConfig::first();
+        if ($existingConfig) {
+            return response()->json([
+                'code' => 409,
+                'msg' => '实验室已存在，请勿重复创建',
+                'data' => [
+                    'lab_id' => $existingConfig->id,
+                    'name' => $existingConfig->name,
+                ]
+            ], 409);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'intro' => 'required|string',
+            'address' => 'required|string|max:255',
+            'contact' => 'nullable|string|max:255',
+            'logo' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $config = LabConfig::create($validator->validated());
+
+        return response()->json([
+            'code' => 201,
+            'msg' => '实验室创建成功',
+            'data' => [
+                'lab_id' => $config->id,
+                'name' => $config->name,
+                'intro' => $config->intro,
+                'address' => $config->address,
+                'contact' => $config->contact,
+                'created_at' => $config->created_at,
+            ]
+        ], 201);
+    }
+
+    /**
      * 删除实验室配置（管理员专用）
      */
     public function deleteLabConfig(Request $request)

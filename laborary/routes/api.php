@@ -27,17 +27,19 @@ Route::prefix('lab')->group(function () {
 
 // --- 实验室配置管理 (管理员专用) ---
 Route::middleware(['auth:api', 'admin.role'])->prefix('admin/lab')->group(function () {
-    // [写入] 保存/更新实验室配置
+    //建立实验室
+    Route::post('/create', [LxController::class, 'createLab']);
+    //保存/更新实验室配置
     Route::post('/config', [LxController::class, 'saveLabConfig']);
-    // [删除] 删除实验室配置
+    //删除实验室配置
     Route::delete('/config', [LxController::class, 'deleteLabConfig']);
 });
 
 // --- 部门管理模块 ---
 Route::prefix('departments')->group(function () {
-    // [读取] 获取所有部门列表（公开）
+    //获取所有部门列表（公开）
     Route::get('/', [LxController::class, 'getDepartments']);
-    // [读取] 获取指定 ID 的部门详细信息（公开）
+    //获取指定 ID 的部门详细信息（公开）
     Route::get('/{id}', [LxController::class, 'getDepartmentDetail']);
 });
 
@@ -91,12 +93,6 @@ Route::prefix('forgot-password')->group(function () {
     Route::post('/reset', [FmyController::class, 'resetPassword']);
 });
 
-// --- 兼容旧版路径 (公开) ---
-// 为了兼容前端旧代码，保留不带前缀的直接访问路径
-Route::get('/departments', [LxController::class, 'getDepartments']);             // [读取] 部门列表
-Route::get('/departments/{id}', [LxController::class, 'getDepartmentDetail']);   // [读取] 部门详情
-Route::get('/lab-news', [LxController::class, 'getNewsList']);                   // [读取] 新闻列表
-Route::get('/lab-news/{id}', [LxController::class, 'getNewsDetail']);            // [读取] 新闻详情
 
 
 
