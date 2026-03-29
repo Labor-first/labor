@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
                 'email' => '3258599349@qq.com',
                 'password_hash' => Hash::make('123456'),
                 'is_active' => 0,
-                'role' => 2,
+                'role' => 1,
                 'department_id' => null,
             ],
             [
@@ -55,7 +55,7 @@ class DatabaseSeeder extends Seeder
                 'email' => '1096786713@qq.com',
                 'password_hash' => Hash::make('123456'),
                 'is_active' => 0,
-                'role' => 2,
+                'role' => 1,
                 'department_id' => null,
             ],
         ];
