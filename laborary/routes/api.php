@@ -144,7 +144,7 @@ Route::prefix('drafts')->group(function () {
     Route::delete('/', [LxController::class, 'clearAllDrafts']);
 });
 
-Route::middleware(['auth:api'])->prefix('admin')->group(function () {
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function () {
     // --- 报名管理 (管理员专用) ---
     // [读取] 获取所有报名记录列表（支持筛选/搜索）
     Route::get('/applications', [ApplicationController::class, 'index']);
@@ -177,8 +177,6 @@ Route::middleware(['auth:api'])->prefix('admin')->group(function () {
 
     // [监控] 获取系统当前运行状态（健康检查）
     Route::get('/system/status', [SystemController::class, 'status']);
-});
-   
 
     // --- 培训周次管理 (管理员专用) ---
     Route::get('/training-weeks', [TrainingWeekController::class, 'index']);
@@ -186,3 +184,4 @@ Route::middleware(['auth:api'])->prefix('admin')->group(function () {
     Route::get('/training-weeks/{id}', [TrainingWeekController::class, 'show']);
     Route::put('/training-weeks/{id}', [TrainingWeekController::class, 'update']);
     Route::post('/training-weeks/{id}/publish', [TrainingWeekController::class, 'publish']);
+});
