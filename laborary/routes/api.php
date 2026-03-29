@@ -19,45 +19,53 @@ Route::get('/test', function () {
     return response()->json(['msg' => 'API 正常工作', 'time' => now()]);
 });
 
-// --- 实验室配置模块 (公开) ---
+// --- 实验室配置模块 ---
 Route::prefix('lab')->group(function () {
-    // [读取] 获取实验室的全局配置信息
+    // [读取] 获取实验室的全局配置信息（公开）
     Route::get('/config', [LxController::class, 'getLabConfig']);
+});
 
+// --- 实验室配置管理 (管理员专用) ---
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin/lab')->group(function () {
     // [写入] 保存/更新实验室配置
     Route::post('/config', [LxController::class, 'saveLabConfig']);
-
     // [删除] 删除实验室配置
     Route::delete('/config', [LxController::class, 'deleteLabConfig']);
 });
 
-// --- 部门管理模块 (公开) ---
+// --- 部门管理模块 ---
 Route::prefix('departments')->group(function () {
-    // 获取所有部门列表
+    // [读取] 获取所有部门列表（公开）
     Route::get('/', [LxController::class, 'getDepartments']);
-    // 获取指定 ID 的部门详细信息
+    // [读取] 获取指定 ID 的部门详细信息（公开）
     Route::get('/{id}', [LxController::class, 'getDepartmentDetail']);
+});
 
-    //新增一个部门
+// --- 部门管理 (管理员专用) ---
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin/departments')->group(function () {
+    // [写入] 新增一个部门
     Route::post('/', [LxController::class, 'createDepartment']);
-    // 修改指定 ID 的部门信息
+    // [写入] 修改指定 ID 的部门信息
     Route::put('/{id}', [LxController::class, 'updateDepartment']);
-    // 删除指定 ID 的部门
+    // [删除] 删除指定 ID 的部门
     Route::delete('/{id}', [LxController::class, 'deleteDepartment']);
 });
 
-// --- 新闻公告模块 (公开) ---
+// --- 新闻公告模块 ---
 Route::prefix('lab-news')->group(function () {
-    // [读取] 获取新闻列表（支持分页/筛选）
+    // [读取] 获取新闻列表（支持分页/筛选）（公开）
     Route::get('/', [LxController::class, 'getNewsList']);
-    // [读取] 获取指定 ID 的新闻详细内容
+    // [读取] 获取指定 ID 的新闻详细内容（公开）
     Route::get('/{id}', [LxController::class, 'getNewsDetail']);
+});
 
-    // 发布新新闻
+// --- 新闻公告管理 (管理员专用) ---
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin/lab-news')->group(function () {
+    // [写入] 发布新新闻
     Route::post('/', [LxController::class, 'createNews']);
-    // 编辑指定 ID 的新闻
+    // [写入] 编辑指定 ID 的新闻
     Route::put('/{id}', [LxController::class, 'updateNews']);
-    // 删除指定 ID 的新闻
+    // [删除] 删除指定 ID 的新闻
     Route::delete('/{id}', [LxController::class, 'deleteNews']);
 });
 
@@ -126,6 +134,12 @@ Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']
 
 
 
+// 培训管理接口
+Route::get('/training/stats', [WjcController::class, 'stats']);
+Route::get('/training/learn-progress', [WjcController::class, 'learnProgress']);
+Route::get('/training/homework/pending-correction', [WjcController::class, 'pendingCorrection']);
+Route::get('/training/homework/{homeworkId}', [WjcController::class, 'homeworkDetail']);
+Route::put('/training/homework/{homeworkId}/correct', [WjcController::class, 'correctHomework']);
 
 // --- 表单草稿模块 (公开) ---
 // 支持断点续填功能，保存未完成的表单数据（无需登录，使用device_id标识）
