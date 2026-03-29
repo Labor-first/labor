@@ -153,3 +153,10 @@ Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function (
     Route::put('/training-weeks/{id}', [TrainingWeekController::class, 'update']);
     Route::post('/training-weeks/{id}/publish', [TrainingWeekController::class, 'publish']);
 });
+
+// --- 文件上传模块 (公开) ---
+// 报名表附件上传（支持简历/作品集/证明材料）
+Route::prefix('file')->group(function () {
+    Route::post('/upload', [LxController::class, 'uploadFile']); // 上传文件
+    Route::delete('/delete', [LxController::class, 'deleteFile']);  //删除已上传的文件
+});

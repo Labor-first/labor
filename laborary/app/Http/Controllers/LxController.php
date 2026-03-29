@@ -8,7 +8,9 @@ use App\Models\LabConfig;
 use App\Models\LabNews;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class LxController extends Controller
 {
@@ -983,5 +985,106 @@ class LxController extends Controller
                 'updated_at' => $draft->updated_at,
             ]
         ]);
+    }
+
+    // ==================== 文件上传管理 ====================
+
+    /**
+     * 文件上传接口
+     * 支持上传简历/作品集/证明材料（PDF、ZIP、图片，≤10MB）
+     */
+    public function uploadFile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:pdf,zip,jpg,jpeg,png,gif|max:10240',
+            'fileType' => 'nullable|string|in:resume,portfolio,certificate,other',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $file = $request->file('file');
+        $fileType = $request->input('fileType', 'other');
+        
+        // 生成唯一文件名
+        $fileId = 'file-' . time() . '-' . Str::random(8);
+        $originalName = $file->getClientOriginalName();
+        $extension = $file->getClientOriginalExtension();
+        $fileName = $fileId . '.' . $extension;
+        
+        // 按日期分目录存储
+        $datePath = date('Y-m-d');
+        $directory = "uploads/{$fileType}/{$datePath}";
+        
+        // 存储文件
+        $path = $file->storeAs($directory, $fileName, 'public');
+        
+        if (!$path) {
+            return response()->json([
+                'code' => 500,
+                'msg' => '文件上传失败',
+                'data' => null
+            ], 500);
+        }
+
+        // 生成访问URL
+        $fileUrl = Storage::url($path);
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '文件上传成功',
+            'data' => [
+                'fileId' => $fileId,
+                'fileName' => $originalName,
+                'fileSize' => $file->getSize(),
+                'fileUrl' => $fileUrl,
+                'fileType' => $fileType,
+                'uploadTime' => now()->format('Y-m-d H:i:s'),
+            ]
+        ]);
+    }
+
+    /**
+     * 删除已上传的文件
+     */
+    public function deleteFile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'fileUrl' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $fileUrl = $request->input('fileUrl');
+        
+        // 从URL中提取路径
+        $path = str_replace(Storage::url(''), '', $fileUrl);
+        $fullPath = 'public/' . $path;
+
+        if (Storage::exists($fullPath)) {
+            Storage::delete($fullPath);
+            return response()->json([
+                'code' => 200,
+                'msg' => '文件删除成功',
+                'data' => null
+            ]);
+        }
+
+        return response()->json([
+            'code' => 404,
+            'msg' => '文件不存在',
+            'data' => null
+        ], 404);
     }
 }
