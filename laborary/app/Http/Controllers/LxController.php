@@ -1068,12 +1068,21 @@ class LxController extends Controller
 
         $fileUrl = $request->input('fileUrl');
         
-        // 从URL中提取路径
-        $path = str_replace(Storage::url(''), '', $fileUrl);
-        $fullPath = 'public/' . $path;
+        // 从URL中提取相对路径
+        // fileUrl 格式: /storage/uploads/resume/2026-03-29/file-xxx.jpg
+        // 需要转换为: uploads/resume/2026-03-29/file-xxx.jpg
+        $path = $fileUrl;
+        
+        // 移除 /storage/ 前缀
+        if (str_starts_with($path, '/storage/')) {
+            $path = substr($path, 9); // 移除 '/storage/'
+        } elseif (str_starts_with($path, 'storage/')) {
+            $path = substr($path, 8); // 移除 'storage/'
+        }
 
-        if (Storage::exists($fullPath)) {
-            Storage::delete($fullPath);
+        // 检查并删除文件（disk 为 public）
+        if (Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
             return response()->json([
                 'code' => 200,
                 'msg' => '文件删除成功',
