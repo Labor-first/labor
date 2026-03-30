@@ -12,8 +12,10 @@ return new class extends Migration
     public function up()
     {
         Schema::table('application_forms', function (Blueprint $table) {
-            // 注意这里使用了 after('major')
-            $table->string('email')->after('major')->comment('邮箱')->change();
+            // 先检查列是否存在
+            if (!Schema::hasColumn('application_forms', 'email')) {
+                $table->string('email')->after('major')->comment('邮箱');
+            }
         });
     }
 
