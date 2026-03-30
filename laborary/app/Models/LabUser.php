@@ -95,10 +95,10 @@ class LabUser extends Authenticatable implements JWTSubject
         return $this->hasOne(ApplicationForm::class, 'user_id');
     }
 
-    // 👇 👇 👇 我给你新加的【作业关联】（不影响你原有代码）
-    public function homeworks(): HasMany
+    // 学员的问题【一对多】- 一个学员可以提多个问题，每个问题属于一个学员
+    public function questions(): HasMany
     {
-        return $this->hasMany(Homework::class, 'user_id');
+        return $this->hasMany(Question::class, 'user_id');
     }
 
     /**

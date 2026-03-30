@@ -1102,7 +1102,7 @@ class LxController extends Controller
 
     /**
      * 新增问题接口
-     * 学员只能创建自己的问题
+     * 需要登录
      */
     public function createQuestion(Request $request)
     {
@@ -1150,19 +1150,10 @@ class LxController extends Controller
 
     /**
      * 修改问题接口
-     * 学员只能修改自己的问题，管理员可以修改所有问题
+     * 公开访问，使用 device_id 验证权限
      */
     public function updateQuestion(Request $request, $id)
     {
-        // 检查是否登录
-        if (!$request->user()) {
-            return response()->json([
-                'code' => 401,
-                'msg' => '请先登录',
-                'data' => null
-            ], 401);
-        }
-
         $question = Question::find($id);
 
         if (!$question) {
@@ -1174,24 +1165,40 @@ class LxController extends Controller
         }
 
         $user = $request->user();
-        $isAdmin = $user->role === 1;
+        $isAdmin = $user && $user->role === 1;
 
-        // 非管理员只能修改自己的问题
-        if (!$isAdmin && $question->user_id !== $user->id) {
-            return response()->json([
-                'code' => 403,
-                'msg' => '只能修改自己的问题',
-                'data' => null
-            ], 403);
-        }
+        // 非管理员需要验证权限
+        if (!$isAdmin) {
+            $hasPermission = false;
 
-        // 学员只能修改待回复的问题
-        if (!$isAdmin && !$question->isPending()) {
-            return response()->json([
-                'code' => 403,
-                'msg' => '只能修改待回复的问题',
-                'data' => null
-            ], 403);
+            // 登录用户：检查是否是自己的问题
+            if ($user && $question->user_id === $user->id) {
+                $hasPermission = true;
+            }
+            // 匿名用户：检查 device_id 是否匹配
+            elseif (!$user && $question->device_id) {
+                $deviceId = $request->input('device_id');
+                if ($deviceId && $question->device_id === $deviceId) {
+                    $hasPermission = true;
+                }
+            }
+
+            if (!$hasPermission) {
+                return response()->json([
+                    'code' => 403,
+                    'msg' => '只能修改自己的问题',
+                    'data' => null
+                ], 403);
+            }
+
+            // 只能修改待回复的问题
+            if (!$question->isPending()) {
+                return response()->json([
+                    'code' => 403,
+                    'msg' => '只能修改待回复的问题',
+                    'data' => null
+                ], 403);
+            }
         }
 
         $validator = Validator::make($request->all(), [

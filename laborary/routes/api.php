@@ -153,7 +153,7 @@ Route::prefix('file')->group(function () {
 // --- 学员问题管理 (需要登录) ---
 Route::middleware('auth:api')->prefix('questions')->group(function () {
     Route::post('/', [LxController::class, 'createQuestion']);//新增问题
-    Route::get('/', [LxController::class, 'getQuestions']);//获取问题列表（学员看自己，管理员看全部）
+    Route::get('/', [LxController::class, 'getQuestions']);//获取问题列表
     Route::get('/{id}', [LxController::class, 'getQuestionDetail']);//获取单个问题详情
     Route::put('/{id}', [LxController::class, 'updateQuestion']);//修改问题
     Route::delete('/{id}', [LxController::class, 'deleteQuestion']);//删除问题
