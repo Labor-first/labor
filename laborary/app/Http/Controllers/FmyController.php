@@ -202,7 +202,7 @@ class FmyController extends Controller
                 'code' => 200,
                 'message' => '验证码已发送到您的邮箱，有效期10分钟',
                 'data' => [
-                    'email' => $this->maskEmail($user->email)
+                    'email' => substr_replace($user->email, '****', 2, strpos($user->email, '@') - 2)
                 ]
             ]);
         } catch (\Exception $e) {
@@ -292,29 +292,6 @@ class FmyController extends Controller
         ]);
     }
 
-    /**
-     * 邮箱脱敏显示
-     */
-    private function maskEmail(string $email): string
-    {
-        $parts = explode('@', $email);
-        if (count($parts) !== 2) {
-            return $email;
-        }
-
-        $name = $parts[0];
-        $domain = $parts[1];
-
-        $nameLength = strlen($name);
-        if ($nameLength <= 2) {
-            $maskedName = $name[0] . '***';
-        } else {
-            $maskedName = substr($name, 0, 2) . '***' . substr($name, -1);
-        }
-
-        return $maskedName . '@' . $domain;
-    }
-
 
     /**
      * 提交报名 (免登录 + StoreRegistrationRequest 验证)
@@ -352,6 +329,7 @@ class FmyController extends Controller
                     'class'         => $data['class'],
                     'academy'       => $data['academy'],
                     'major'         => $data['major'],
+                    'email'         => $data['email'],
                     'director_name' => $data['director_name'],
                     'sign_reason'   => $data['sign_reason'],
                     'user_id'       => $data['user_id'],
@@ -759,8 +737,8 @@ class FmyController extends Controller
 
             case 'trainee':
                 if (empty($targetIds)) break;
-                $users = LabUser::whereIn('id', $targetIds)
-                    ->select('id', 'username', 'email')
+                $users = ApplicationForm::whereIn('id', $targetIds)
+                    ->select('id', 'name', 'email')
                     ->whereNotNull('email')
                     ->get();
                 break;

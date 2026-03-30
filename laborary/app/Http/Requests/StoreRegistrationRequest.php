@@ -24,6 +24,7 @@ class StoreRegistrationRequest extends FormRequest
             'class'         => 'required|string|max:50',
             'academy'       => 'required|string|max:100',
             'major'         => 'required|string|max:100',
+            'email'         => 'required|string|email|max:100',
             'director_name' => 'required|string|max:50',
             'sign_reason'   => 'required|string|min:10|max:500',
         ];
@@ -39,6 +40,7 @@ class StoreRegistrationRequest extends FormRequest
             'class.required'      => '班级不能为空',
             'academy.required'    => '学院不能为空',
             'major.required'      => '专业不能为空',
+            'email.required'      =>'邮箱不能为空',
             'director_name.required' => '导员姓名不能为空',
             'sign_reason.required'   => '申请理由不能为空',
             'sign_reason.min'        => '申请理由不能少于10个字',

@@ -28,6 +28,7 @@ class ApplicationForm extends Model
         'class',//班级
         'academy',//学院
         'major',//专业
+        'email',
         'director_name',//导员姓名
         'sign_reason',//报名理由
     ];
@@ -42,6 +43,7 @@ class ApplicationForm extends Model
     const STATUS_APPROVED = 2;  // 已通过
     const STATUS_CANCELLED = 3; // 已取消
     const STATUS_REJECTED = 4;  // 已拒绝
+
     public function config(): BelongsTo
     {
         return $this->belongsTo(RegistrationConfig::class, 'config_id');
