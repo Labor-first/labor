@@ -1296,7 +1296,7 @@ class LxController extends Controller
         $user = $request->user();
         $isAdmin = $user->role === 1;
 
-        $query = Question::with('user:id,name');
+        $query = Question::with('user:id,username');
 
         // 非管理员只能查看自己的问题
         if (!$isAdmin) {
@@ -1310,10 +1310,19 @@ class LxController extends Controller
 
         $questions = $query->orderBy('created_at', 'desc')->paginate(10);
 
+        // 简化分页数据，只保留必要字段
+        $simplifiedData = [
+            'current_page' => $questions->currentPage(),
+            'data' => $questions->items(),
+            'per_page' => $questions->perPage(),//每页数量
+            'total' => $questions->total(),//总条数
+            'last_page' => $questions->lastPage(),//总页数
+        ];
+
         return response()->json([
             'code' => 200,
             'msg' => '获取成功',
-            'data' => $questions
+            'data' => $simplifiedData
         ]);
     }
 
@@ -1331,7 +1340,7 @@ class LxController extends Controller
             ], 401);
         }
 
-        $question = Question::with(['user:id,name', 'answerer:id,name'])->find($id);
+        $question = Question::with(['user:id,username', 'answerer:id,username'])->find($id);
 
         if (!$question) {
             return response()->json([
