@@ -114,37 +114,26 @@ Route::prefix('drafts')->group(function () {
 
 // --- 报名管理 (管理员专用) ---
 Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function () {
-    // [读取] 获取所有报名记录列表（支持筛选/搜索）
-    Route::get('/applications', [ApplicationController::class, 'index']);
+    Route::get('/applications', [ApplicationController::class, 'index']);//获取所有报名记录列表（支持筛选/搜索）
+    Route::put('/applications/{id}/audit', [ApplicationController::class, 'audit']);//审核指定的报名申请（通过/拒绝）
+    Route::get('/applications/export', [ApplicationController::class, 'export']);//导出报名数据为 Excel/CSV 文件
 
-    // [审核] 审核指定的报名申请（通过/拒绝）
-    Route::put('/applications/{id}/audit', [ApplicationController::class, 'audit']);
 
-    // [导出] 导出报名数据为 Excel/CSV 文件
-    Route::get('/applications/export', [ApplicationController::class, 'export']);
 
     // --- 用户管理 (管理员专用) ---
-    // [读取] 获取系统所有用户列表
-    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users', [UserController::class, 'index']);//获取系统所有用户列表
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);//强制删除指定 ID 的用户账号
+    Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword']);//强制重置指定用户的密码
+    Route::post('/users/import', [UserController::class, 'import']);//批量导入用户数据（从 Excel 等文件）
+    Route::get('/users/template', [UserController::class, 'template']);//下载用户导入模板
 
-    // [删除] 强制删除指定 ID 的用户账号
-    Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-    // [重置] 强制重置指定用户的密码
-    Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword']);
-
-    // [导入] 批量导入用户数据（从 Excel 等文件）
-    Route::post('/users/import', [UserController::class, 'import']);
-
-    // [模板] 下载用户导入模板
-    Route::get('/users/template', [UserController::class, 'template']);
 
     // --- 系统设置 (管理员专用) ---
-    // [开关] 控制报名通道的开启或关闭
-    Route::put('/system/application-toggle', [SystemController::class, 'toggleApplication']);
+    Route::put('/system/application-toggle', [SystemController::class, 'toggleApplication']);// [开关] 控制报名通道的开启或关闭
+    Route::get('/system/status', [SystemController::class, 'status']);//获取系统当前运行状态（健康检查）
 
-    // [监控] 获取系统当前运行状态（健康检查）
-    Route::get('/system/status', [SystemController::class, 'status']);
+
 
     // --- 培训周次管理 (管理员专用) ---
     Route::get('/training-weeks', [TrainingWeekController::class, 'index']);
@@ -163,14 +152,9 @@ Route::prefix('file')->group(function () {
 
 // --- 学员问题管理 (需要登录) ---
 Route::middleware('auth:api')->prefix('questions')->group(function () {
-    // [写入] 新增问题
-    Route::post('/', [LxController::class, 'createQuestion']);
-    // [列表] 获取问题列表（学员看自己，管理员看全部）
-    Route::get('/', [LxController::class, 'getQuestions']);
-    // [详情] 获取单个问题详情
-    Route::get('/{id}', [LxController::class, 'getQuestionDetail']);
-    // [更新] 修改问题
-    Route::put('/{id}', [LxController::class, 'updateQuestion']);
-    // [删除] 删除问题
-    Route::delete('/{id}', [LxController::class, 'deleteQuestion']);
+    Route::post('/', [LxController::class, 'createQuestion']);//新增问题
+    Route::get('/', [LxController::class, 'getQuestions']);//获取问题列表（学员看自己，管理员看全部）
+    Route::get('/{id}', [LxController::class, 'getQuestionDetail']);//获取单个问题详情
+    Route::put('/{id}', [LxController::class, 'updateQuestion']);//修改问题
+    Route::delete('/{id}', [LxController::class, 'deleteQuestion']);//删除问题
 });
