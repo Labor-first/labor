@@ -160,3 +160,17 @@ Route::prefix('file')->group(function () {
     Route::post('/upload', [LxController::class, 'uploadFile']); // 上传文件
     Route::delete('/delete', [LxController::class, 'deleteFile']);//删除已上传的文件
 });
+
+// --- 学员问题管理 (需要登录) ---
+Route::middleware('auth:api')->prefix('questions')->group(function () {
+    // [写入] 新增问题
+    Route::post('/', [LxController::class, 'createQuestion']);
+    // [列表] 获取问题列表（学员看自己，管理员看全部）
+    Route::get('/', [LxController::class, 'getQuestions']);
+    // [详情] 获取单个问题详情
+    Route::get('/{id}', [LxController::class, 'getQuestionDetail']);
+    // [更新] 修改问题
+    Route::put('/{id}', [LxController::class, 'updateQuestion']);
+    // [删除] 删除问题
+    Route::delete('/{id}', [LxController::class, 'deleteQuestion']);
+});

@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\FormDraft;
 use App\Models\LabConfig;
 use App\Models\LabNews;
+use App\Models\Question;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -1095,5 +1096,267 @@ class LxController extends Controller
             'msg' => '文件不存在',
             'data' => null
         ], 404);
+    }
+
+    // ==================== 学员问题管理 ====================
+
+    /**
+     * 新增问题接口
+     * 学员只能创建自己的问题
+     */
+    public function createQuestion(Request $request)
+    {
+        // 检查是否登录
+        if (!$request->user()) {
+            return response()->json([
+                'code' => 401,
+                'msg' => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $question = Question::create([
+            'user_id' => $request->user()->id,
+            'title' => $request->input('title'),
+            'content' => $request->input('content'),
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '问题提交成功',
+            'data' => [
+                'id' => $question->id,
+                'title' => $question->title,
+                'content' => $question->content,
+                'status' => $question->status,
+                'created_at' => $question->created_at,
+            ]
+        ]);
+    }
+
+    /**
+     * 修改问题接口
+     * 学员只能修改自己的问题，管理员可以修改所有问题
+     */
+    public function updateQuestion(Request $request, $id)
+    {
+        // 检查是否登录
+        if (!$request->user()) {
+            return response()->json([
+                'code' => 401,
+                'msg' => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        $question = Question::find($id);
+
+        if (!$question) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '问题不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $user = $request->user();
+        $isAdmin = $user->role === 1;
+
+        // 非管理员只能修改自己的问题
+        if (!$isAdmin && $question->user_id !== $user->id) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '只能修改自己的问题',
+                'data' => null
+            ], 403);
+        }
+
+        // 学员只能修改待回复的问题
+        if (!$isAdmin && !$question->isPending()) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '只能修改待回复的问题',
+                'data' => null
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title' => 'nullable|string|max:255',
+            'content' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $updateData = array_filter($validator->validated());
+
+        if (empty($updateData)) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '未传入任何更新内容',
+                'data' => null
+            ], 400);
+        }
+
+        $question->update($updateData);
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '问题修改成功',
+            'data' => [
+                'id' => $question->id,
+                'title' => $question->title,
+                'content' => $question->content,
+                'status' => $question->status,
+                'updated_at' => $question->updated_at,
+            ]
+        ]);
+    }
+
+    /**
+     * 删除问题接口
+     * 学员只能删除自己的问题，管理员可以删除所有问题
+     */
+    public function deleteQuestion(Request $request, $id)
+    {
+        // 检查是否登录
+        if (!$request->user()) {
+            return response()->json([
+                'code' => 401,
+                'msg' => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        $question = Question::find($id);
+
+        if (!$question) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '问题不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $user = $request->user();
+        $isAdmin = $user->role === 1;
+
+        // 非管理员只能删除自己的问题
+        if (!$isAdmin && $question->user_id !== $user->id) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '只能删除自己的问题',
+                'data' => null
+            ], 403);
+        }
+
+        $question->delete();
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '问题删除成功',
+            'data' => null
+        ]);
+    }
+
+    /**
+     * 获取问题列表接口
+     * 学员只能查看自己的问题，管理员可以查看所有问题
+     */
+    public function getQuestions(Request $request)
+    {
+        // 检查是否登录
+        if (!$request->user()) {
+            return response()->json([
+                'code' => 401,
+                'msg' => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        $user = $request->user();
+        $isAdmin = $user->role === 1;
+
+        $query = Question::with('user:id,name');
+
+        // 非管理员只能查看自己的问题
+        if (!$isAdmin) {
+            $query->where('user_id', $user->id);
+        }
+
+        // 可选按状态筛选
+        if ($request->has('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $questions = $query->orderBy('created_at', 'desc')->paginate(10);
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '获取成功',
+            'data' => $questions
+        ]);
+    }
+
+    /**
+     * 获取单个问题详情接口
+     */
+    public function getQuestionDetail(Request $request, $id)
+    {
+        // 检查是否登录
+        if (!$request->user()) {
+            return response()->json([
+                'code' => 401,
+                'msg' => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        $question = Question::with(['user:id,name', 'answerer:id,name'])->find($id);
+
+        if (!$question) {
+            return response()->json([
+                'code' => 404,
+                'msg' => '问题不存在',
+                'data' => null
+            ], 404);
+        }
+
+        $user = $request->user();
+        $isAdmin = $user->role === 1;
+
+        // 非管理员只能查看自己的问题
+        if (!$isAdmin && $question->user_id !== $user->id) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '只能查看自己的问题',
+                'data' => null
+            ], 403);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '获取成功',
+            'data' => $question
+        ]);
     }
 }
