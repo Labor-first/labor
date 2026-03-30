@@ -23,16 +23,6 @@ class Question extends Model
         return $value ? Carbon::parse($value)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s') : null;
     }
 
-    public function getUpdatedAtAttribute($value)
-    {
-        return $value ? Carbon::parse($value)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s') : null;
-    }
-
-    public function getAnsweredAtAttribute($value)
-    {
-        return $value ? Carbon::parse($value)->setTimezone('Asia/Shanghai')->format('Y-m-d H:i:s') : null;
-    }
-
     protected $fillable = [
         'user_id',
         'title',
