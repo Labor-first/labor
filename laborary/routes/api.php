@@ -99,6 +99,12 @@ Route::get('/training/homework/pending-correction', [WjcController::class, 'pend
 Route::get('/training/homework/{homeworkId}', [WjcController::class, 'homeworkDetail']);
 Route::put('/training/homework/{homeworkId}/correct', [WjcController::class, 'correctHomework']);
 
+// 查看个人作业批改情况
+Route::get('/trainee/task/correct/{taskId}', [WjcController::class, 'getTaskCorrectInfo']);
+// 作业回显接口
+Route::get('/trainee/task/echo/{taskId}', [WjcController::class, 'echoTask']);
+// 发布作业
+Route::post('/admin/task/publish', [WjcController::class, 'publishTask']);
 
 // --- 表单草稿模块 (公开) ---
 // 支持断点续填功能，保存未完成的表单数据（无需登录，使用device_id标识）

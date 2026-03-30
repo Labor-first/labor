@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\LabUser;
+use App\Models\Homework;
+use App\Models\Notification;
+use App\Models\Task;
+use App\Models\TaskCorrect;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -12,8 +16,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CorrectHomeworkRequest;
-use App\Models\Homework;
-use App\Models\Notification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -294,6 +296,32 @@ class WjcController extends Controller
         ]);
     }
 
+    //发布作业（管理员）
+    public function publishTask (Request $request)
+    {
+        $validated = $request->validate([
+            'taskName' => 'required|string|max:100',
+            'modelId' => 'required|string',
+            'modelName' => 'required|string',
+            'trainParams' => 'required|array',
+            'dataSetId' => 'required|string',
+            'dataSetName' => 'required|string',
+            'deadline' => 'required|date_format:Y-m-d H:i:s',
+            'taskDesc' => 'nullable|string|max:2000',
+            'assignRange' => 'required|in:all,specific',
+            'assignTrainees' => 'nullable|array'
+        ]);
+
+        return response()->json([
+            'code' => 200,
+            'msg' => '作业发布成功，已通知相关学员',
+            'data' => [
+                'taskId' => 'publish-'.rand(1000,9999),
+                'publishTime' => date('Y-m-d H:i:s')
+            ]
+        ]);
+    }
+
     // 待批改作业队列
     public function pendingCorrection()
     {
@@ -329,6 +357,73 @@ class WjcController extends Controller
             'code' => 200,
             'msg'  => '批改成功',
             'data' => null
+        ]);
+    }
+
+    //查看个人作业批改情况
+    public function getTaskCorrectInfo($taskId)
+    {
+        $task = Task::find($taskId);
+        if(!$task){
+            return response()->json([
+                'code' => 404,
+                'msg' => '作业不存在',
+                'data' => null,
+                'timestamp' => time()
+            ]);
+        }
+
+        $correctInfo = TaskCorrect::where('task_id', $taskId)->first();
+         return response()->json([
+            'code' => 200,
+            'msg' => '查询成功',
+            'data' => [
+                'taskId' => $taskId,
+                'correctStatus' => $correctInfo ? $correctInfo->correct_status : 'uncorrected',
+                'correctScore'    => $correctInfo ? $correctInfo->score : null,
+                'correctComment'  => $correctInfo ? $correctInfo->comment : null,
+                'correctTime'     => $correctInfo ? $correctInfo->created_at->format('Y-m-d H:i:s') : null,
+                'corrector'       => $correctInfo ? $correctInfo->corrector_id : null
+            ],
+            'timestamp' => time()
+        ]);
+    }
+
+    //作业回显
+    public function echoTask($taskId)
+    {
+        $task = Task::with(['model', 'dataSet', 'correct'])->find($taskId);
+        if (!$task) {
+            return response()->json([
+                'code' => 404,
+                'msg'  => '未查询到该作业任务信息，无法回显',
+                'data' => null,
+                'timestamp' => time()
+            ]);
+        }
+        return response()->json([
+            'code' => 200,
+            'msg'  => '作业回显成功',
+            'data' => [
+                'taskId'          => $taskId,
+                'taskName'        => $task->task_name,
+                'modelId'         => $task->model_id,
+                'modelName'       => $task->model->model_name ?? '',
+                'trainParams'     => json_decode($task->train_params, true),
+                'dataSetId'       => $task->data_set_id,
+                'dataSetName'     => $task->dataSet->data_set_name ?? '',
+                'submitDesc'      => $task->submit_desc, 
+                'createTime'      => $task->created_at->format('Y-m-d H:i:s'),
+                'startTime'       => $task->start_time ? $task->start_time->format('Y-m-d H:i:s') : null,
+                'endTime'         => $task->end_time ? $task->end_time->format('Y-m-d H:i:s') : null,
+                'taskStatus'      => $task->task_status, 
+                'progress'        => $task->progress,
+                '算力Resource'    => $task->compute_resource, 
+                'correctStatus'   => $task->correct ? $task->correct->correct_status : 'uncorrected',
+                'correctScore'    => $task->correct ? $task->correct->score : null, 
+                'correctComment'  => $task->correct ? $task->correct->comment : null
+            ],
+            'timestamp' => time()
         ]);
     }
 }
