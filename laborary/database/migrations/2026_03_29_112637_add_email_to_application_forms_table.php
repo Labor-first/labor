@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('application_forms', function (Blueprint $table) {
             // 注意这里使用了 after('major')
-            $table->string('email')->after('major')->comment('邮箱')->change();
+            $table->string('email')->after('major')->comment('邮箱');
         });
     }
 
