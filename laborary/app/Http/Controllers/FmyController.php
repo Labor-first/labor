@@ -827,9 +827,13 @@ class FmyController extends Controller
         }
     }
 
-    //获取个人作业任务列表
-    public function getTaskList(Request $request): JsonResponse
+    //发布作业（管理员）
+    public function sendHomeworks(Request $request): JsonResponse
     {
-        
+        // 检查是否以管理员身份登录
+        if (!Auth::guard('admin')->check()) {
+            return response()->json(['message' => '管理员请先登录'], 401);
+        }
+
     }
 }
