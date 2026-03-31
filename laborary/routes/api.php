@@ -164,3 +164,8 @@ Route::middleware('auth:api')->prefix('questions')->group(function () {
     Route::put('/{id}', [LxController::class, 'updateQuestion']);//修改问题
     Route::delete('/{id}', [LxController::class, 'deleteQuestion']);//删除问题
 });
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function () {
+    Route::apiResource('faqs', \App\Http\Controllers\Admin\FaqController::class);
+    Route::post('faqs/answer-all', [\App\Http\Controllers\Admin\FaqController::class, 'answerAll']);
+    Route::post('faqs/batch-delete', [\App\Http\Controllers\Admin\FaqController::class, 'batchDelete']);
+});
