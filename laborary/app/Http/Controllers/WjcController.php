@@ -301,15 +301,11 @@ class WjcController extends Controller
     {
         $validated = $request->validate([
             'taskName' => 'required|string|max:100',
-            'modelId' => 'required|string',
-            'modelName' => 'required|string',
-            'trainParams' => 'required|array',
-            'dataSetId' => 'required|string',
-            'dataSetName' => 'required|string',
             'deadline' => 'required|date_format:Y-m-d H:i:s',
             'taskDesc' => 'nullable|string|max:2000',
-            'assignRange' => 'required|in:all,specific',
-            'assignTrainees' => 'nullable|array'
+            'modelId' => 'nullable|string',
+            'dataSetId' => 'nullable|string',
+            'assignToAll' => 'boolean' // 简化分配范围，true 表示分配给所有人
         ]);
 
         return response()->json([
@@ -407,18 +403,11 @@ class WjcController extends Controller
             'data' => [
                 'taskId'          => $taskId,
                 'taskName'        => $task->task_name,
-                'modelId'         => $task->model_id,
-                'modelName'       => $task->model->model_name ?? '',
-                'trainParams'     => json_decode($task->train_params, true),
-                'dataSetId'       => $task->data_set_id,
-                'dataSetName'     => $task->dataSet->data_set_name ?? '',
-                'submitDesc'      => $task->submit_desc, 
+                'taskDesc'        => $task->submit_desc, 
                 'createTime'      => $task->created_at->format('Y-m-d H:i:s'),
-                'startTime'       => $task->start_time ? $task->start_time->format('Y-m-d H:i:s') : null,
-                'endTime'         => $task->end_time ? $task->end_time->format('Y-m-d H:i:s') : null,
+                'deadline'        => $task->end_time ? $task->end_time->format('Y-m-d H:i:s') : null,
                 'taskStatus'      => $task->task_status, 
                 'progress'        => $task->progress,
-                '算力Resource'    => $task->compute_resource, 
                 'correctStatus'   => $task->correct ? $task->correct->correct_status : 'uncorrected',
                 'correctScore'    => $task->correct ? $task->correct->score : null, 
                 'correctComment'  => $task->correct ? $task->correct->comment : null
@@ -426,4 +415,5 @@ class WjcController extends Controller
             'timestamp' => time()
         ]);
     }
+    
 }
