@@ -98,16 +98,21 @@ Route::get('/training/learn-progress', [WjcController::class, 'learnProgress']);
 
 
 // --- 作业管理接口 ---
+
+// 学生端作业接口（需要登录）
 Route::middleware('auth:api')->group(function () {
-    Route::post('/admin/homework-tasks', [WjcController::class, 'publishTask']);    // 管理员发布作业任务
-    Route::get('/admin/homework-submissions/pending', [WjcController::class, 'pendingCorrection']);// 待批改作业列表
-    Route::get('/admin/homework-submissions/{submissionId}', [WjcController::class, 'homeworkDetail']);// 查看作业提交详情
-    Route::put('/admin/homework-submissions/{submissionId}/correct', [WjcController::class, 'correctHomework']);// 批改作业
-    
     Route::get('/homework-tasks', [WjcController::class, 'getHomeworkTaskList']);// 获取作业任务列表
-    Route::get('/homework-tasks/{taskId}', [WjcController::class, 'echoTask']);// 查看作业任务详情
+    Route::get('/homework-tasks/{taskId}', [WjcController::class, 'echoTask']);// 查看作业任务详情（包含用户已提交内容，用于编辑回显）
     Route::post('/homework-tasks/{taskId}/submit', [WjcController::class, 'submitHomework']);// 提交作业
     Route::get('/homework-tasks/{taskId}/my-submission', [WjcController::class, 'getTaskCorrectInfo']);// 查看自己的作业批改情况
+});
+
+// 管理员作业接口（需要登录且是管理员）
+Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function () {
+    Route::post('/homework-tasks', [WjcController::class, 'publishTask']);// 管理员发布作业任务
+    Route::get('/homework-submissions/pending', [WjcController::class, 'pendingCorrection']);// 待批改作业列表
+    Route::get('/homework-submissions/{submissionId}', [WjcController::class, 'homeworkDetail']);// 查看作业提交详情
+    Route::put('/homework-submissions/{submissionId}/correct', [WjcController::class, 'correctHomework']);// 批改作业
 });
 
 
@@ -171,7 +176,7 @@ Route::middleware('auth:api')->prefix('questions')->group(function () {
     Route::delete('/{id}', [LxController::class, 'deleteQuestion']);//删除问题
 });
 Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function () {
-    Route::apiResource('faqs', \App\Http\Controllers\Admin\FaqController::class);
-    Route::post('faqs/answer-all', [\App\Http\Controllers\Admin\FaqController::class, 'answerAll']);
-    Route::post('faqs/batch-delete', [\App\Http\Controllers\Admin\FaqController::class, 'batchDelete']);
+    Route::apiResource('faqs', \App\Http\Controllers\Admin\FaqController::class);// 问题管理接口
+    Route::post('faqs/answer-all', [\App\Http\Controllers\Admin\FaqController::class, 'answerAll']);// 批量回答问题
+    Route::post('faqs/batch-delete', [\App\Http\Controllers\Admin\FaqController::class, 'batchDelete']);// 批量删除问题
 });
