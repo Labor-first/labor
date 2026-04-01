@@ -342,12 +342,49 @@ class WjcController extends Controller
     }
 
     // 待批改作业队列
-    public function pendingCorrection()
+    public function pendingCorrection(Request $request)
     {
+        // 获取状态筛选参数，默认为待批改
+        $status = $request->input('status', 'submitted');
+        
+        $query = HomeworkSubmission::with(['user:id,username', 'task:id,title'])
+            ->whereIn('status', ['submitted', 'corrected']);
+            
+        // 如果指定了状态，则按状态筛选
+        if ($status && in_array($status, ['submitted', 'corrected'])) {
+            $query->where('status', $status);
+        }
+        
+        $submissions = $query->orderBy('created_at', 'desc')
+            ->paginate(10);
+        
+        // 格式化数据
+        $data = $submissions->map(function ($submission) {
+            return [
+                'submissionId' => $submission->id,
+                'taskId'       => $submission->task_id,
+                'taskTitle'    => $submission->task ? $submission->task->title : null,
+                'traineeId'    => $submission->user_id,
+                'traineeName'  => $submission->user ? $submission->user->username : null,
+                'content'      => $submission->content,
+                'attachment'   => $submission->attachment,
+                'status'       => $submission->status,
+                'score'        => $submission->score,
+                'comment'      => $submission->comment,
+                'submittedAt'  => $submission->created_at ? $submission->created_at->format('Y-m-d H:i:s') : null,
+            ];
+        });
+        
         return response()->json([
             'code' => 200,
             'msg'  => '操作成功',
-            'data' => []
+            'data' => [
+                'current_page' => $submissions->currentPage(),
+                'data' => $data,
+                'per_page' => $submissions->perPage(),
+                'total' => $submissions->total(),
+                'last_page' => $submissions->lastPage(),
+            ]
         ]);
     }
 
