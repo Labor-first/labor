@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\LabUser;
-use App\Models\Homework;
+use App\Models\HomeworkTask;
+use App\Models\HomeworkSubmission;      
 use App\Models\Notification;
-use App\Models\Task;
-use App\Models\TaskCorrect;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -15,7 +14,6 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CorrectHomeworkRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -297,23 +295,47 @@ class WjcController extends Controller
     }
 
     //发布作业（管理员）
-    public function publishTask (Request $request)
+    public function publishTask(Request $request)
     {
-        $validated = $request->validate([
-            'taskName' => 'required|string|max:100',
-            'deadline' => 'required|date_format:Y-m-d H:i:s',
-            'taskDesc' => 'nullable|string|max:2000',
-            'modelId' => 'nullable|string',
-            'dataSetId' => 'nullable|string',
-            'assignToAll' => 'boolean' // 简化分配范围，true 表示分配给所有人
+        // 检查是否登录且为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg' => '需要管理员权限',
+                'data' => null
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+            'attachment' => 'nullable|string',
+            'deadline' => 'nullable|date_format:Y-m-d H:i:s',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg' => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $task = HomeworkTask::create([
+            'title' => $request->input('title'),
+            'content' => $request->input('content'),
+            'attachment' => $request->input('attachment'),
+            'deadline' => $request->input('deadline'),
+            'created_by' => $request->user()->id,
         ]);
 
         return response()->json([
             'code' => 200,
-            'msg' => '作业发布成功，已通知相关学员',
+            'msg' => '作业发布成功',
             'data' => [
-                'taskId' => 'publish-'.rand(1000,9999),
-                'publishTime' => date('Y-m-d H:i:s')
+                'taskId' => $task->id,
+                'title' => $task->title,
+                'publishTime' => $task->created_at,
             ]
         ]);
     }
@@ -328,15 +350,15 @@ class WjcController extends Controller
         ]);
     }
 
-    // 作业详情
-    public function homeworkDetail($homeworkId)
+    // 作业提交详情
+    public function homeworkDetail($submissionId)
     {
-        $homework = Homework::with('user:id,username')->find($homeworkId);
+        $submission = HomeworkSubmission::with(['user:id,username', 'task'])->find($submissionId);
 
-        if (!$homework) {
+        if (!$submission) {
             return response()->json([
                 'code' => 404,
-                'msg'  => '作业不存在',
+                'msg'  => '作业提交不存在',
                 'data' => null
             ], 404);
         }
@@ -345,31 +367,40 @@ class WjcController extends Controller
             'code' => 200,
             'msg'  => '操作成功',
             'data' => [
-                'homeworkId'  => $homework->id,
-                'traineeName' => $homework->user ? $homework->user->username : null,
-                'content'     => $homework->content,
-                'attachment'  => $homework->attachment,
-                'status'      => $homework->status,
-                'score'       => $homework->score,
-                'comment'     => $homework->comment,
-                'week'        => $homework->week,
-                'createdAt'   => $homework->created_at,
-                'updatedAt'   => $homework->updated_at,
+                'submissionId' => $submission->id,
+                'taskId'       => $submission->task_id,
+                'taskTitle'    => $submission->task ? $submission->task->title : null,
+                'traineeName'  => $submission->user ? $submission->user->username : null,
+                'content'      => $submission->content,
+                'attachment'   => $submission->attachment,
+                'status'       => $submission->status,
+                'score'        => $submission->score,
+                'comment'      => $submission->comment,
+                'submittedAt'  => $submission->created_at,
             ]
         ]);
     }
 
     // 提交批改
-    public function correctHomework(Request $request, $homeworkId)
+    public function correctHomework(Request $request, $submissionId)
     {
-        $homework = Homework::find($homeworkId);
+        $submission = HomeworkSubmission::find($submissionId);
 
-        if (!$homework) {
+        if (!$submission) {
             return response()->json([
                 'code' => 404,
-                'msg'  => '作业不存在',
+                'msg'  => '作业提交不存在',
                 'data' => null
             ], 404);
+        }
+
+        // 检查是否登录且为管理员
+        if (!$request->user() || $request->user()->role !== 1) {
+            return response()->json([
+                'code' => 403,
+                'msg'  => '需要管理员权限',
+                'data' => null
+            ], 403);
         }
 
         // 验证请求数据
@@ -387,20 +418,16 @@ class WjcController extends Controller
         }
 
         // 更新作业批改信息
-        $homework->update([
-            'score'   => $request->input('score'),
-            'comment' => $request->input('comment'),
-            'status'  => 'corrected',
-        ]);
+        $submission->correct($request->input('score'), $request->input('comment'));
 
         return response()->json([
             'code' => 200,
             'msg'  => '批改成功',
             'data' => [
-                'homeworkId' => $homework->id,
-                'score'      => $homework->score,
-                'comment'    => $homework->comment,
-                'status'     => $homework->status,
+                'submissionId' => $submission->id,
+                'score'        => $submission->score,
+                'comment'      => $submission->comment,
+                'status'       => $submission->status,
             ]
         ]);
     }
@@ -408,36 +435,40 @@ class WjcController extends Controller
     //查看个人作业批改情况
     public function getTaskCorrectInfo($taskId)
     {
-        $task = Task::find($taskId);
+        $task = HomeworkTask::find($taskId);
         if(!$task){
             return response()->json([
                 'code' => 404,
-                'msg' => '作业不存在',
+                'msg' => '作业任务不存在',
                 'data' => null,
                 'timestamp' => time()
             ]);
         }
 
-        $correctInfo = TaskCorrect::where('task_id', $taskId)->first();
-         return response()->json([
+        // 获取当前用户的提交记录
+        $user = request()->user();
+        $submission = HomeworkSubmission::where('task_id', $taskId)
+            ->where('user_id', $user ? $user->id : 0)
+            ->first();
+
+        return response()->json([
             'code' => 200,
             'msg' => '查询成功',
             'data' => [
                 'taskId' => $taskId,
-                'correctStatus' => $correctInfo ? $correctInfo->correct_status : 'uncorrected',
-                'correctScore'    => $correctInfo ? $correctInfo->score : null,
-                'correctComment'  => $correctInfo ? $correctInfo->comment : null,
-                'correctTime'     => $correctInfo ? $correctInfo->created_at->format('Y-m-d H:i:s') : null,
-                'corrector'       => $correctInfo ? $correctInfo->corrector_id : null
+                'correctStatus' => $submission ? $submission->status : 'unsubmitted',
+                'correctScore'    => $submission ? $submission->score : null,
+                'correctComment'  => $submission ? $submission->comment : null,
+                'correctTime'     => $submission && $submission->updated_at ? $submission->updated_at->format('Y-m-d H:i:s') : null,
             ],
             'timestamp' => time()
         ]);
     }
 
-    //作业回显
+    //作业任务回显
     public function echoTask($taskId)
     {
-        $task = Task::with(['model', 'dataSet', 'correct'])->find($taskId);
+        $task = HomeworkTask::find($taskId);
         if (!$task) {
             return response()->json([
                 'code' => 404,
@@ -451,15 +482,11 @@ class WjcController extends Controller
             'msg'  => '作业回显成功',
             'data' => [
                 'taskId'          => $taskId,
-                'taskName'        => $task->task_name,
-                'taskDesc'        => $task->submit_desc, 
+                'taskName'        => $task->title,
+                'taskDesc'        => $task->content, 
                 'createTime'      => $task->created_at->format('Y-m-d H:i:s'),
-                'deadline'        => $task->end_time ? $task->end_time->format('Y-m-d H:i:s') : null,
-                'taskStatus'      => $task->task_status, 
-                'progress'        => $task->progress,
-                'correctStatus'   => $task->correct ? $task->correct->correct_status : 'uncorrected',
-                'correctScore'    => $task->correct ? $task->correct->score : null, 
-                'correctComment'  => $task->correct ? $task->correct->comment : null
+                'deadline'        => $task->deadline ? $task->deadline->format('Y-m-d H:i:s') : null,
+                'attachment'      => $task->attachment,
             ],
             'timestamp' => time()
         ]);
