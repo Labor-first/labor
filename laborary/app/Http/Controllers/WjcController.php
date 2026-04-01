@@ -298,7 +298,7 @@ class WjcController extends Controller
     public function publishTask(Request $request)
     {
         // 检查是否登录且为管理员
-        if (!$request->user() || $request->user()->role !== 1) {
+        if (!$request->user() || $request->user()->role !== 2) {
             return response()->json([
                 'code' => 403,
                 'msg' => '需要管理员权限',
@@ -307,10 +307,12 @@ class WjcController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'attachment' => 'nullable|string',
-            'deadline' => 'nullable|date_format:Y-m-d H:i:s',
+            'taskName' => 'required|string|max:100',
+            'deadline' => 'required|date_format:Y-m-d H:i:s',
+            'taskDesc' => 'nullable|string|max:2000',
+            'modelId' => 'nullable|string',
+            'dataSetId' => 'nullable|string',
+            'assignToAll' => 'boolean'
         ]);
 
         if ($validator->fails()) {
@@ -322,9 +324,8 @@ class WjcController extends Controller
         }
 
         $task = HomeworkTask::create([
-            'title' => $request->input('title'),
-            'content' => $request->input('content'),
-            'attachment' => $request->input('attachment'),
+            'title' => $request->input('taskName'),
+            'content' => $request->input('taskDesc'),
             'deadline' => $request->input('deadline'),
             'created_by' => $request->user()->id,
         ]);
