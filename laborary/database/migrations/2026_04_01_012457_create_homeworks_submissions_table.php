@@ -13,17 +13,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('homework_submissions', function (Blueprint $table) {
-          Schema::create('homework_submissions', function (Blueprint $table) {
             $table->id()->comment('提交ID');
             $table->unsignedBigInteger('task_id')->comment('作业任务ID');
             $table->unsignedBigInteger('user_id')->comment('学员ID');
             $table->text('content')->nullable()->comment('提交内容');
             $table->string('attachment')->nullable()->comment('附件');
-            $table->enum('status', ['submitted', 'corrected'])->default('submitted');// 提交状态：已提交/已批改
+            $table->enum('status', ['submitted', 'corrected'])->default('submitted')->comment('提交状态：已提交/已批改');
             $table->integer('score')->nullable()->comment('得分');
             $table->text('comment')->nullable()->comment('评语');
             $table->timestamps();
-});
+            
+            $table->index('task_id');
+            $table->index('user_id');
+            $table->index(['task_id', 'user_id']);
         });
     }
 

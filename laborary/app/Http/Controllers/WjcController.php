@@ -491,5 +491,118 @@ class WjcController extends Controller
             'timestamp' => time()
         ]);
     }
-    
+
+    // 学员提交作业
+    public function submitHomework(Request $request, $taskId)
+    {
+        // 检查是否登录
+        if (!$request->user()) {
+            return response()->json([
+                'code' => 401,
+                'msg'  => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        // 检查作业任务是否存在
+        $task = HomeworkTask::find($taskId);
+        if (!$task) {
+            return response()->json([
+                'code' => 404,
+                'msg'  => '作业任务不存在',
+                'data' => null
+            ], 404);
+        }
+
+        // 检查是否已截止
+        if ($task->isExpired()) {
+            return response()->json([
+                'code' => 403,
+                'msg'  => '作业已截止提交',
+                'data' => null
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'content'    => 'required|string',
+            'attachment' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg'  => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $user = $request->user();
+
+        // 检查是否已提交过
+        $existingSubmission = HomeworkSubmission::where('task_id', $taskId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($existingSubmission) {
+            // 更新已有提交
+            $existingSubmission->update([
+                'content'    => $request->input('content'),
+                'attachment' => $request->input('attachment'),
+                'status'     => 'submitted',
+            ]);
+            $submission = $existingSubmission;
+            $msg = '作业更新成功';
+        } else {
+            // 创建新提交
+            $submission = HomeworkSubmission::create([
+                'task_id'    => $taskId,
+                'user_id'    => $user->id,
+                'content'    => $request->input('content'),
+                'attachment' => $request->input('attachment'),
+                'status'     => 'submitted',
+            ]);
+            $msg = '作业提交成功';
+        }
+
+        return response()->json([
+            'code' => 200,
+            'msg'  => $msg,
+            'data' => [
+                'submissionId' => $submission->id,
+                'taskId'       => $taskId,
+                'status'       => $submission->status,
+                'submittedAt'  => $submission->created_at,
+            ]
+        ]);
+    }
+
+    // 获取作业任务列表
+    public function getHomeworkTaskList(Request $request)
+    {
+        // 检查是否登录
+        if (!$request->user()) {
+            return response()->json([
+                'code' => 401,
+                'msg'  => '请先登录',
+                'data' => null
+            ], 401);
+        }
+
+        $tasks = HomeworkTask::orderBy('created_at', 'desc')->paginate(10);
+
+        // 简化分页数据
+        $simplifiedData = [
+            'current_page' => $tasks->currentPage(),
+            'data' => $tasks->items(),
+            'per_page' => $tasks->perPage(),
+            'total' => $tasks->total(),
+            'last_page' => $tasks->lastPage(),
+        ];
+
+        return response()->json([
+            'code' => 200,
+            'msg'  => '获取成功',
+            'data' => $simplifiedData
+        ]);
+    }
 }
