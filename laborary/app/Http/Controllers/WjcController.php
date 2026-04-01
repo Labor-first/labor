@@ -333,7 +333,7 @@ class WjcController extends Controller
             'code' => 200,
             'msg' => '作业发布成功',
             'data' => [
-                'taskId' => $task->id,
+                'taskId' => (string) $task->id,
                 'title' => $task->title,
                 'publishTime' => $task->created_at,
             ]
