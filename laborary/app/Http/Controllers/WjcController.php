@@ -331,17 +331,30 @@ class WjcController extends Controller
     // 作业详情
     public function homeworkDetail($homeworkId)
     {
+        $homework = Homework::with('user:id,username')->find($homeworkId);
+
+        if (!$homework) {
+            return response()->json([
+                'code' => 404,
+                'msg'  => '作业不存在',
+                'data' => null
+            ], 404);
+        }
+
         return response()->json([
             'code' => 200,
             'msg'  => '操作成功',
             'data' => [
-                'homeworkId'  => $homeworkId,
-                'traineeName' => "测试学员",
-                'content'     => "作业内容",
-                'attachment'  => null,
-                'status'      => "pending_correction",
-                'score'       => null,
-                'comment'     => null,
+                'homeworkId'  => $homework->id,
+                'traineeName' => $homework->user ? $homework->user->username : null,
+                'content'     => $homework->content,
+                'attachment'  => $homework->attachment,
+                'status'      => $homework->status,
+                'score'       => $homework->score,
+                'comment'     => $homework->comment,
+                'week'        => $homework->week,
+                'createdAt'   => $homework->created_at,
+                'updatedAt'   => $homework->updated_at,
             ]
         ]);
     }
@@ -349,10 +362,46 @@ class WjcController extends Controller
     // 提交批改
     public function correctHomework(Request $request, $homeworkId)
     {
+        $homework = Homework::find($homeworkId);
+
+        if (!$homework) {
+            return response()->json([
+                'code' => 404,
+                'msg'  => '作业不存在',
+                'data' => null
+            ], 404);
+        }
+
+        // 验证请求数据
+        $validator = Validator::make($request->all(), [
+            'score'   => 'required|integer|min:0|max:100',
+            'comment' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'msg'  => '参数错误',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        // 更新作业批改信息
+        $homework->update([
+            'score'   => $request->input('score'),
+            'comment' => $request->input('comment'),
+            'status'  => 'corrected',
+        ]);
+
         return response()->json([
             'code' => 200,
             'msg'  => '批改成功',
-            'data' => null
+            'data' => [
+                'homeworkId' => $homework->id,
+                'score'      => $homework->score,
+                'comment'    => $homework->comment,
+                'status'     => $homework->status,
+            ]
         ]);
     }
 
