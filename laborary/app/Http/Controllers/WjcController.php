@@ -22,7 +22,12 @@ class WjcController extends Controller
 {
     public function login(\Illuminate\Http\Request $request): JsonResponse
     {
-        $credentials = $request->only('account', 'password');
+        // 支持使用 account 或 email 登录
+        $account = $request->input('account', $request->input('email'));
+        $credentials = [
+            'account' => $account,
+            'password' => $request->input('password')
+        ];
         $remember = $request->input('remember_me', false);
         
         if (!$token = JWTAuth::attempt($credentials)) {
@@ -298,7 +303,7 @@ class WjcController extends Controller
     public function publishTask(Request $request)
     {
         // 检查是否登录且为管理员
-        if (!$request->user() || $request->user()->role !== 1) {
+        if (!$request->user() || $request->user()->role !== 2) {
             return response()->json([
                 'code' => 403,
                 'msg' => '需要管理员权限',
@@ -307,10 +312,12 @@ class WjcController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'attachment' => 'nullable|string',
-            'deadline' => 'nullable|date_format:Y-m-d H:i:s',
+            'taskName' => 'required|string|max:100',
+            'deadline' => 'required|date_format:Y-m-d H:i:s',
+            'taskDesc' => 'nullable|string|max:2000',
+            'modelId' => 'nullable|string',
+            'dataSetId' => 'nullable|string',
+            'assignToAll' => 'boolean'
         ]);
 
         if ($validator->fails()) {
@@ -322,9 +329,8 @@ class WjcController extends Controller
         }
 
         $task = HomeworkTask::create([
-            'title' => $request->input('title'),
-            'content' => $request->input('content'),
-            'attachment' => $request->input('attachment'),
+            'title' => $request->input('taskName'),
+            'content' => $request->input('taskDesc'),
             'deadline' => $request->input('deadline'),
             'created_by' => $request->user()->id,
         ]);
@@ -333,7 +339,7 @@ class WjcController extends Controller
             'code' => 200,
             'msg' => '作业发布成功',
             'data' => [
-                'taskId' => $task->id,
+                'taskId' => (string) $task->id,
                 'title' => $task->title,
                 'publishTime' => $task->created_at,
             ]
@@ -341,12 +347,49 @@ class WjcController extends Controller
     }
 
     // 待批改作业队列
-    public function pendingCorrection()
+    public function pendingCorrection(Request $request)
     {
+        // 获取状态筛选参数，默认为待批改
+        $status = $request->input('status', 'submitted');
+        
+        $query = HomeworkSubmission::with(['user:id,username', 'task:id,title'])
+            ->whereIn('status', ['submitted', 'corrected']);
+            
+        // 如果指定了状态，则按状态筛选
+        if ($status && in_array($status, ['submitted', 'corrected'])) {
+            $query->where('status', $status);
+        }
+        
+        $submissions = $query->orderBy('created_at', 'desc')
+            ->paginate(10);
+        
+        // 格式化数据
+        $data = $submissions->map(function ($submission) {
+            return [
+                'submissionId' => $submission->id,
+                'taskId'       => $submission->task_id,
+                'taskTitle'    => $submission->task ? $submission->task->title : null,
+                'traineeId'    => $submission->user_id,
+                'traineeName'  => $submission->user ? $submission->user->username : null,
+                'content'      => $submission->content,
+                'attachment'   => $submission->attachment,
+                'status'       => $submission->status,
+                'score'        => $submission->score,
+                'comment'      => $submission->comment,
+                'submittedAt'  => $submission->created_at ? $submission->created_at->format('Y-m-d H:i:s') : null,
+            ];
+        });
+        
         return response()->json([
             'code' => 200,
             'msg'  => '操作成功',
-            'data' => []
+            'data' => [
+                'current_page' => $submissions->currentPage(),
+                'data' => $data,
+                'per_page' => $submissions->perPage(),
+                'total' => $submissions->total(),
+                'last_page' => $submissions->lastPage(),
+            ]
         ]);
     }
 
@@ -395,7 +438,7 @@ class WjcController extends Controller
         }
 
         // 检查是否登录且为管理员
-        if (!$request->user() || $request->user()->role !== 1) {
+        if (!$request->user() || $request->user()->role !== 2) {
             return response()->json([
                 'code' => 403,
                 'msg'  => '需要管理员权限',
@@ -465,8 +508,8 @@ class WjcController extends Controller
         ]);
     }
 
-    //作业任务回显
-    public function echoTask($taskId)
+    //作业任务回显（包含用户已提交的内容）
+    public function echoTask(Request $request, $taskId)
     {
         $task = HomeworkTask::find($taskId);
         if (!$task) {
@@ -477,6 +520,16 @@ class WjcController extends Controller
                 'timestamp' => time()
             ]);
         }
+
+        // 获取当前用户已提交的作业内容（如果有）
+        $user = $request->user();
+        $submission = null;
+        if ($user) {
+            $submission = HomeworkSubmission::where('task_id', $taskId)
+                ->where('user_id', $user->id)
+                ->first();
+        }
+
         return response()->json([
             'code' => 200,
             'msg'  => '作业回显成功',
@@ -487,6 +540,11 @@ class WjcController extends Controller
                 'createTime'      => $task->created_at->format('Y-m-d H:i:s'),
                 'deadline'        => $task->deadline ? $task->deadline->format('Y-m-d H:i:s') : null,
                 'attachment'      => $task->attachment,
+                // 用户已提交的作业内容
+                'myContent'       => $submission ? $submission->content : null,
+                'myAttachment'    => $submission ? $submission->attachment : null,
+                'submitStatus'    => $submission ? $submission->status : 'unsubmitted',
+                'submitTime'      => $submission ? $submission->created_at->format('Y-m-d H:i:s') : null,
             ],
             'timestamp' => time()
         ]);
