@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('questions')) {
+            return;
+        }
+        
         Schema::create('questions', function (Blueprint $table) {
             $table->id()->comment('问题ID，主键');
             $table->unsignedBigInteger('user_id')->comment('提问学员ID');
