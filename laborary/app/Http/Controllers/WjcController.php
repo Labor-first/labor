@@ -22,7 +22,12 @@ class WjcController extends Controller
 {
     public function login(\Illuminate\Http\Request $request): JsonResponse
     {
-        $credentials = $request->only('account', 'password');
+        // 支持使用 account 或 email 登录
+        $account = $request->input('account', $request->input('email'));
+        $credentials = [
+            'account' => $account,
+            'password' => $request->input('password')
+        ];
         $remember = $request->input('remember_me', false);
         
         if (!$token = JWTAuth::attempt($credentials)) {
@@ -396,7 +401,7 @@ class WjcController extends Controller
         }
 
         // 检查是否登录且为管理员
-        if (!$request->user() || $request->user()->role !== 1) {
+        if (!$request->user() || $request->user()->role !== 2) {
             return response()->json([
                 'code' => 403,
                 'msg'  => '需要管理员权限',
