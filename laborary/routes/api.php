@@ -95,18 +95,20 @@ Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function (
 // 培训管理接口
 Route::get('/training/stats', [WjcController::class, 'stats']);
 Route::get('/training/learn-progress', [WjcController::class, 'learnProgress']);
-Route::get('/training/homework/pending-correction', [WjcController::class, 'pendingCorrection']);
-Route::get('/training/homework/{homeworkId}', [WjcController::class, 'homeworkDetail']);
-Route::put('/training/homework/{homeworkId}/correct', [WjcController::class, 'correctHomework']);
 
-// 个人作业列表（需要登录）
-Route::middleware('auth:api')->get('/homeworks', [FmyController::class, 'getHomeworks']);
-// 提交作业（需要登录）
-Route::middleware('auth:api')->post('/homeworks/submit', [FmyController::class, 'submitHomework']);
-// 查看个人作业批改情况
-Route::get('/trainee/task/correct/{taskId}', [WjcController::class, 'getTaskCorrectInfo']);// 查看个人作业批改情况
-Route::get('/trainee/task/echo/{taskId}', [WjcController::class, 'echoTask']);// 作业回显接口
-Route::post('/admin/task/publish', [WjcController::class, 'publishTask']);// 发布作业
+
+// --- 作业管理接口 ---
+Route::middleware('auth:api')->group(function () {
+    Route::post('/admin/homework-tasks', [WjcController::class, 'publishTask']);    // 管理员发布作业任务
+    Route::get('/admin/homework-submissions/pending', [WjcController::class, 'pendingCorrection']);// 待批改作业列表
+    Route::get('/admin/homework-submissions/{submissionId}', [WjcController::class, 'homeworkDetail']);// 查看作业提交详情
+    Route::put('/admin/homework-submissions/{submissionId}/correct', [WjcController::class, 'correctHomework']);// 批改作业
+    
+    Route::get('/homework-tasks', [WjcController::class, 'getHomeworkTaskList']);// 获取作业任务列表
+    Route::get('/homework-tasks/{taskId}', [WjcController::class, 'echoTask']);// 查看作业任务详情
+    Route::post('/homework-tasks/{taskId}/submit', [WjcController::class, 'submitHomework']);// 提交作业
+    Route::get('/homework-tasks/{taskId}/my-submission', [WjcController::class, 'getTaskCorrectInfo']);// 查看自己的作业批改情况
+});
 
 
 
