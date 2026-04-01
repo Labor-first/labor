@@ -86,10 +86,10 @@ Route::middleware('auth:api')->group(function () {
 Route::post('/registration', [FmyController::class, 'registrationStore']);//提交新的报名表单
 Route::get('/registration/status', [FmyController::class, 'CheckRegistrationStatus']);//查看当前用户的报名状态（需传参 config_id）
 Route::post('/registration/cancel', [FmyController::class, 'cancelRegistration']);//取消/撤回已提交的报名申请
-
+//发布/保存通知|获取当前登录用户的草稿列表
 Route::middleware(['auth:api', 'admin.role'])->prefix('admin')->group(function () {
-    Route::post('/training-notifications', [FmyController::class, 'store']);//发布/保存通知
-    Route::get('/training-notifications/drafts', [FmyController::class, 'getDrafts']);//获取当前登录用户的草稿列表
+    Route::post('/training-notifications', [FmyController::class, 'store']);
+    Route::get('/training-notifications/drafts', [FmyController::class, 'getDrafts']);
 });
 
 // 培训管理接口
@@ -99,6 +99,10 @@ Route::get('/training/homework/pending-correction', [WjcController::class, 'pend
 Route::get('/training/homework/{homeworkId}', [WjcController::class, 'homeworkDetail']);
 Route::put('/training/homework/{homeworkId}/correct', [WjcController::class, 'correctHomework']);
 
+// 个人作业列表（需要登录）
+Route::middleware('auth:api')->get('/homeworks', [FmyController::class, 'getHomeworks']);
+// 提交作业（需要登录）
+Route::middleware('auth:api')->post('/homeworks/submit', [FmyController::class, 'submitHomework']);
 // 查看个人作业批改情况
 Route::get('/trainee/task/correct/{taskId}', [WjcController::class, 'getTaskCorrectInfo']);// 查看个人作业批改情况
 Route::get('/trainee/task/echo/{taskId}', [WjcController::class, 'echoTask']);// 作业回显接口
