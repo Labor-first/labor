@@ -303,7 +303,7 @@ class WjcController extends Controller
     public function publishTask(Request $request)
     {
         // 检查是否登录且为管理员
-        if (!$request->user() || $request->user()->role !== 2) {
+        if (!$request->user() || $request->user()->role !== 1) {
             return response()->json([
                 'code' => 403,
                 'msg' => '需要管理员权限',
@@ -349,11 +349,10 @@ class WjcController extends Controller
     // 待批改作业队列
     public function pendingCorrection(Request $request)
     {
-        // 获取状态筛选参数，默认为待批改
-        $status = $request->input('status', 'submitted');
+        // 获取状态筛选参数，不传则返回所有状态
+        $status = $request->input('status');
         
-        $query = HomeworkSubmission::with(['user:id,username', 'task:id,title'])
-            ->whereIn('status', ['submitted', 'corrected']);
+        $query = HomeworkSubmission::with(['user:id,username', 'task:id,title']);
             
         // 如果指定了状态，则按状态筛选
         if ($status && in_array($status, ['submitted', 'corrected'])) {
@@ -438,7 +437,7 @@ class WjcController extends Controller
         }
 
         // 检查是否登录且为管理员
-        if (!$request->user() || $request->user()->role !== 2) {
+        if (!$request->user() || $request->user()->role !== 1) {
             return response()->json([
                 'code' => 403,
                 'msg'  => '需要管理员权限',

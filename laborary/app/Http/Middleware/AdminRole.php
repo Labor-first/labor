@@ -20,8 +20,8 @@ class AdminRole
             ]);
         }
 
-        // 检查角色是否为管理员 (role = 2)
-        if ($request->user()->role !== 2) {
+        // 检查角色是否为管理员 (role = 1)
+        if ($request->user()->role !== 1) {
             return response()->json([
                 'code' => 403,
                 'msg' => '没有权限执行此操作',
