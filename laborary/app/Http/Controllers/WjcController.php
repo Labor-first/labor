@@ -465,8 +465,8 @@ class WjcController extends Controller
         ]);
     }
 
-    //作业任务回显
-    public function echoTask($taskId)
+    //作业任务回显（包含用户已提交的内容）
+    public function echoTask(Request $request, $taskId)
     {
         $task = HomeworkTask::find($taskId);
         if (!$task) {
@@ -477,6 +477,16 @@ class WjcController extends Controller
                 'timestamp' => time()
             ]);
         }
+
+        // 获取当前用户已提交的作业内容（如果有）
+        $user = $request->user();
+        $submission = null;
+        if ($user) {
+            $submission = HomeworkSubmission::where('task_id', $taskId)
+                ->where('user_id', $user->id)
+                ->first();
+        }
+
         return response()->json([
             'code' => 200,
             'msg'  => '作业回显成功',
@@ -487,6 +497,11 @@ class WjcController extends Controller
                 'createTime'      => $task->created_at->format('Y-m-d H:i:s'),
                 'deadline'        => $task->deadline ? $task->deadline->format('Y-m-d H:i:s') : null,
                 'attachment'      => $task->attachment,
+                // 用户已提交的作业内容
+                'myContent'       => $submission ? $submission->content : null,
+                'myAttachment'    => $submission ? $submission->attachment : null,
+                'submitStatus'    => $submission ? $submission->status : 'unsubmitted',
+                'submitTime'      => $submission ? $submission->created_at->format('Y-m-d H:i:s') : null,
             ],
             'timestamp' => time()
         ]);
