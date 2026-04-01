@@ -13,6 +13,7 @@ use App\Models\ApplicationForm;
 use App\Models\Homework;
 use App\Models\RegistrationConfig;
 use App\Models\LabUser;
+use App\Models\Task;
 use App\Models\TrainingNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Exception;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Validator;
 use Throwable;
 use Illuminate\Support\Facades\Auth; // 用于 Sanctum 认证
 use Illuminate\Support\Facades\Cache;
@@ -830,15 +832,122 @@ class FmyController extends Controller
     //获取个人作业任务列表
     public function getHomeworks(Request $request): JsonResponse
     {
-        //检查是否登录(已包含 Token 有效性检查)
+        //检查是否登录
         $user = Auth::guard('api')->user();
-        if(!$user){
+        if (!$user) {
             return response()->json([
                 'code' => 401,
-                'message'=>'用户未登录或登录无效',
+                'message' => '用户未登录或认证失败',
                 'data' => null
-            ],401);
+            ], 401);
         }
 
+        try
+        {
+            // 查询个人作业
+            $homeworks = Homework::where('user_id', $user->id)
+                ->select('id', 'content','attachment','score', 'comment','status','week', 'created_at')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'code' => 200,
+                'message' => '获取作业列表成功',
+                'data' => $homeworks
+            ]);
+        } catch (\Exception $e)
+        {
+            Log::error('获取作业列表失败', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => '获取作业列表失败，请稍后重试',
+                'data' => null
+            ], 500);
+        }
+    }
+    //提交作业
+    public function submitHomework(Request $request): JsonResponse
+    {
+        //检查是否登录
+        $user = Auth::guard('api')->user();
+        if (!$user) {
+            return response()->json([
+                'code' => 401,
+                'message' => '用户未登录或认证失败',
+                'data' => null
+            ], 401);
+        }
+
+        //验证参数
+        $validator = Validator::make($request->all(), [
+            'content' => 'required|string|min:10',
+            'attachment'=> 'required|file|mimes:jpeg,jpg,png'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'code' => 400,
+                'message' => '参数错误：' . $validator->errors()->first(),
+                'data' => null
+            ], 400);
+        }
+
+        try {
+            $content = $request->input('content');
+            $attachment = $request->file('attachment');
+
+            //查询作业
+            $homework = Homework::where('user_id',$user->id)
+                        ->first();
+
+            if (!$homework) {
+                return response()->json([
+                    'code' => 404,
+                    'message' => '作业不存在',
+                    'data' => null
+                ], 404);
+            }
+
+            //检查作业状态
+            if ($homework->status !== 'unsubmitted') {
+                return response()->json([
+                    'code' => 400,
+                    'message' => '作业已提交或已评分，不能重复提交',
+                    'data' => null
+                ], 400);
+            }
+
+            //更新作业
+            $homework->content = $content;
+            $homework->attachment = $attachment;
+            $homework->status = 'submitted';
+            $homework->save();
+
+            return response()->json([
+                'code' => 200,
+                'message' => '作业提交成功',
+                'data' => [
+                    'id' => $homework->id,
+                    'content' => $homework->content,
+                    'status' => $homework->status,
+                    'submitted_at' => $homework->updated_at
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('作业提交失败', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'code' => 500,
+                'message' => '作业提交失败，请稍后重试',
+                'data' => null
+            ], 500);
+        }
     }
 }
